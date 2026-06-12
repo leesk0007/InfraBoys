@@ -1,9 +1,6 @@
 name: Terraform Plan & Scan
 
 on:
-  pull_request:
-    paths:
-      - 'terraform/**'
   workflow_dispatch:
 
 permissions:
@@ -34,17 +31,15 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      # 1. Trivy 스캔 결과를 JSON 형식으로 저장하도록 변경
       - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'config'
           scan-ref: 'terraform'
-          format: 'table'
-          output: 'trivy-report.txt' 
-          hide-progress: false
-
-      - name: Show Trivy Output
-        run: cat ${{ github.workspace }}/trivy-report.txt
+          format: 'json'
+          output: '${{ github.workspace }}/trivy-report.json' 
+          hide-progress: true
 
       - name: Terraform Validate
         run: terraform validate
@@ -65,52 +60,73 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
+      # 2. Infracost 파싱을 위해 JSON과 PR용 Table을 모두 생성
       - name: Run Infracost
         run: |
-          infracost breakdown --path plan.json --format table --out-file infracost-report.txt
+          infracost breakdown --path plan.json --format json --out-file infracost-report.json
+          infracost output --path infracost-report.json --format table --out-file infracost-report.txt
           cat infracost-report.txt
 
-      - name: Generate Discord Message
+      # 3. 디스코드 요약 메시지 생성 (상위 5개 상세 내역 추출)
+      - name: Generate Discord Payload
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         run: |
-            cat > discord-message.md <<EOF
-            ### 🔍 인프라 사전 검증 리포트
-            
-            #### 💵 예상 월 비용
-            EOF
-            
-            grep -E "OVERALL TOTAL|Total Monthly" infracost-report.txt | head -3 >> discord-message.md || echo "(비용 정보 없음)" >> discord-message.md
-            
-            cat >> discord-message.md <<EOF
-            
-            #### 🛡️ 보안 스캔 결과
-            EOF
-            
-            CRITICAL=$(grep -c "CRITICAL:" ${{ github.workspace }}/trivy-report.txt 2>/dev/null || echo 0)
-            HIGH=$(grep -c "HIGH:" ${{ github.workspace }}/trivy-report.txt 2>/dev/null || echo 0)
-            MEDIUM=$(grep -c "MEDIUM:" ${{ github.workspace }}/trivy-report.txt 2>/dev/null || echo 0)
-            
-            echo "- CRITICAL: $CRITICAL" >> discord-message.md
-            echo "- HIGH: $HIGH" >> discord-message.md
-            echo "- MEDIUM: $MEDIUM" >> discord-message.md
-            
-            echo "" >> discord-message.md
-            echo "상세 내용: [GitHub Actions 로그 확인](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> discord-message.md
-            
-            echo "=== 생성된 메시지 ==="
-            cat discord-message.md
+          # [비용 상세 파싱] 금액이 0보다 큰 리소스만 추출하여 비싼 순으로 정렬 후 상위 5개 자르기
+          TOTAL_COST=$(jq -r '.totalMonthlyCost // "0.00"' infracost-report.json)
+          COST_DETAILS=$(jq -r '[.projects[]?.breakdown?.resources[]? | select(.monthlyCost != null and (.monthlyCost | tonumber) > 0)] | sort_by(.monthlyCost | tonumber) | reverse | .[0:5] | map("- `\(.name)`: $\(.monthlyCost)") | join("\n")' infracost-report.json)
 
+          if [ -z "$COST_DETAILS" ]; then
+            COST_DETAILS="추가 비용이 발생하는 주요 리소스가 없습니다."
+          fi
+
+          # [보안 취약점 상세 파싱] 전체 개수 및 CRITICAL/HIGH 중심 상위 5개 내역 추출
+          CRITICAL=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity == "CRITICAL")] | length' ${{ github.workspace }}/trivy-report.json || echo 0)
+          HIGH=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity == "HIGH")] | length' ${{ github.workspace }}/trivy-report.json || echo 0)
+          MEDIUM=$(jq '[.Results[]?.Misconfigurations[]? | select(.Severity == "MEDIUM")] | length' ${{ github.workspace }}/trivy-report.json || echo 0)
+
+          SECURITY_DETAILS=$(jq -r '[.Results[]? | .Target as $target | .Misconfigurations[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH") | "- [**\(.Severity)**] \(.Title) `(\($target))`"] | .[0:5] | join("\n")' ${{ github.workspace }}/trivy-report.json)
+
+          if [ -z "$SECURITY_DETAILS" ] || [ "$SECURITY_DETAILS" == "null" ]; then
+            SECURITY_DETAILS="발견된 주요 취약점(CRITICAL/HIGH)이 없습니다. 🥳"
+          fi
+
+          # [Discord Embed 페이로드 생성] 글자 수 제한을 피하고 예쁜 UI 구성을 위해 Embed 사용
+          jq -n \
+            --arg total "$TOTAL_COST" \
+            --arg cost_details "$COST_DETAILS" \
+            --arg c "$CRITICAL" \
+            --arg h "$HIGH" \
+            --arg m "$MEDIUM" \
+            --arg sec_details "$SECURITY_DETAILS" \
+            --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              "embeds": [{
+                "title": "🔍 인프라 사전 검증 리포트",
+                "color": 3447003,
+                "description": "Terraform Plan 결과에 대한 상세 비용 및 보안 스캔 내역입니다.\n👉 [**GitHub Actions 로그 및 PR 확인하기**](\($url))",
+                "fields": [
+                  {
+                    "name": "💵 예상 월 비용 (Total: $\($total))",
+                    "value": $cost_details
+                  },
+                  {
+                    "name": "🛡️ 보안 스캔 결과 (C: \($c), H: \($h), M: \($m))",
+                    "value": $sec_details
+                  }
+                ]
+              }]
+            }' > discord-payload.json
+
+      # 4. Webhook 전송
       - name: Send Discord Notification
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         run: |
-          MESSAGE=$(cat discord-message.md)
-          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
-          
           curl -s -H "Content-Type: application/json" \
             -X POST \
             -d @discord-payload.json \
             "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
+      # 5. 기존 PR 코멘트는 상세한 전체 테이블 정보를 유지
       - name: Post Plan & Cost to PR comment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -120,7 +136,21 @@ jobs:
             const plan = fs.readFileSync('terraform/envs/dev/plan-output.txt', 'utf8');
             const cost = fs.readFileSync('terraform/envs/dev/infracost-report.txt', 'utf8');
             
-            const output = `## 인프라 변경 사전 검증 리포트\n### Infracost 예상 비용\n\`\`\`text\n${cost}\n\`\`\`\n### Terraform Plan 상세 내역\n<details><summary>Plan 결과 전개</summary>\n\n\`\`\`text\n${plan}\n\`\`\`\n\n</details>`;
+            const output = `## 🔍 인프라 변경 사전 검증 리포트
+            
+            ### 💵 Infracost 예상 비용
+            \`\`\`text
+            ${cost}
+            \`\`\`
+            
+            ### 🏗️ Terraform Plan 상세 내역
+            <details><summary>Plan 결과 펼쳐보기</summary>
+            
+            \`\`\`text
+            ${plan}
+            \`\`\`
+            
+            </details>`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
