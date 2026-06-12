@@ -12,7 +12,7 @@ output "alb_dns_name" {
   value = module.project02_alb.alb_dns_name
 }
 
-output "was_ecr_repository_url" {
+output "aws_ecr_repository_url" {
   description = "The URL of the ECR repository for the WAS application"
   value       = aws_ecr_repository.was_repo.repository_url
 }
