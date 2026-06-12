@@ -16,9 +16,6 @@ jobs:
     env:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
       TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
-
-    env:
-      TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
       TF_VAR_db_user:            ${{ secrets.DB_USER }}
       TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
 
