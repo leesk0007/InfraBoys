@@ -1,0 +1,131 @@
+name: "Scheduled Scaling"
+
+on:
+  workflow_dispatch:
+    inputs:
+      capacity:
+        description: "목표 용량 (Desired Capacity)"
+        required: true
+        default: "3"
+      duration:
+        description: "유지 시간 (분)"
+        required: true
+        default: "30"
+      user:
+        description: "요청자"
+        required: false
+        default: "Manual"
+
+  repository_dispatch:
+    types: [scheduled-scale]
+
+concurrency:
+  group: terraform-state
+  cancel-in-progress: false
+
+jobs:
+  scheduled_scale:
+    runs-on: self-hosted
+    timeout-minutes: 120
+
+    env:
+      TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+      TF_VAR_db_user:            ${{ secrets.DB_USER }}
+      TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
+
+    steps:
+      - name: Parse Inputs
+        id: parse
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            CAPACITY="${{ github.event.client_payload.capacity }}"
+            DURATION="${{ github.event.client_payload.duration }}"
+            USER="${{ github.event.client_payload.user }}"
+          else
+            CAPACITY="${{ github.event.inputs.capacity }}"
+            DURATION="${{ github.event.inputs.duration }}"
+            USER="${{ github.event.inputs.user }}"
+          fi
+          
+          echo "capacity=$CAPACITY" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "user=$USER" >> $GITHUB_OUTPUT
+          
+          echo "=== 📥 입력값 파싱 완료 ==="
+          echo "목표 용량: $CAPACITY"
+          echo "유지 시간: $DURATION 분"
+          echo "요청자: $USER"
+
+      - name: Get Current Capacity
+        id: current
+        run: |
+          # ASG의 현재 Desired Capacity를 조회하여 저장
+          ORIGINAL_CAPACITY=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names "project02-asg" \
+            --query "AutoScalingGroups[0].DesiredCapacity" \
+            --output text)
+          
+          echo "original_capacity=$ORIGINAL_CAPACITY" >> $GITHUB_OUTPUT
+          echo "=== 📊 현재 용량 확인 완료 ==="
+          echo "기존 용량: $ORIGINAL_CAPACITY대"
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize Terraform
+        working-directory: terraform/envs/dev
+        run: terraform init
+
+      - name: Scale Up (Apply Capacity)
+        working-directory: terraform/envs/dev
+        run: |
+          terraform apply -auto-approve \
+            -var="desired_capacity=${{ steps.parse.outputs.capacity }}"
+          
+          echo "✅ 스케일 업 완료: ${{ steps.parse.outputs.capacity }}대"
+
+      - name: Send Scale Up Notification
+        run: |
+          MESSAGE="🚀 [이벤트 스케일 업 시작]
+          - 목표 용량: ${{ steps.parse.outputs.capacity }}대
+          - 유지 시간: ${{ steps.parse.outputs.duration }}분
+          - 요청자: ${{ steps.parse.outputs.user }}"
+          
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Wait for Duration
+        run: |
+          DURATION=${{ steps.parse.outputs.duration }}
+          echo "⏰ ${DURATION}분 동안 용량 유지 중..."
+          sleep $((DURATION * 60))
+          echo "✅ 대기 완료"
+
+      - name: Scale Down (Return to Default)
+        working-directory: terraform/envs/dev
+        run: |
+          # 기존 용량으로 복구
+          terraform apply -auto-approve \
+            -var="desired_capacity=${{ steps.current.outputs.original_capacity }}"
+          
+          echo "✅ 스케일 다운 완료: ${{ steps.current.outputs.original_capacity }}대"
+
+      - name: Send Final Notification
+        if: always()
+        run: |
+          MESSAGE="✅ [이벤트 스케일링 종료]
+          - 실행 결과: ${{ job.status }}
+          - 요청자: ${{ steps.parse.outputs.user }}
+          - 최종 상태: 기존 용량(${{ steps.current.outputs.original_capacity }}대) 복구 완료"
+          
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
