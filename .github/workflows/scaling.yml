@@ -7,6 +7,8 @@ on:
         description: "Target capacity size for the Auto Scaling Group (Scale-In/Out)"
         required: true
         default: "3"
+  repository_dispatch:
+    types: [instant-scale]
 
 concurrency:
   group: terraform-state
@@ -22,6 +24,18 @@ jobs:
       TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
 
     steps:
+      - name: Parse Inputs
+        id: parse
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            CAPACITY="${{ github.event.client_payload.desired_capacity }}"
+          else
+            CAPACITY="${{ github.event.inputs.desired_capacity }}"
+          fi
+          echo "capacity=$CAPACITY" >> $GITHUB_OUTPUT
+          echo "=== 📥 입력값 파싱 완료 ==="
+          echo "목표 용량: $CAPACITY"
+
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -35,6 +49,5 @@ jobs:
       - name: Apply Scaling Changes
         working-directory: terraform/envs/dev
         run: |
-          terraform apply \
-            -auto-approve \
-            -var="desired_capacity=${{ github.event.inputs.desired_capacity }}"
+          terraform apply -auto-approve \
+            -var="desired_capacity=${{ steps.parse.outputs.capacity }}"
