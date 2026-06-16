@@ -1,0 +1,46 @@
+# 로컬 개발용 — app + nginx + db 전체 스택
+# 실행: docker compose up
+
+services:
+
+  app:
+    build: .
+    environment:
+      - DB_URL=postgresql://scott:tiger@db:5432/scott_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    restart: always
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: scott
+      POSTGRES_PASSWORD: tiger
+      POSTGRES_DB: scott_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./src/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scott -d scott_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  db_data:

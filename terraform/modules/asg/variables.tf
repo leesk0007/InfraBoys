@@ -43,3 +43,9 @@ variable "user_data" {
   type        = string
   default     = ""
 }
+
+variable "iam_instance_profile" {
+  description = "IAM instance profile name for ECR pull and EC2 discovery"
+  type        = string
+  default     = null
+}

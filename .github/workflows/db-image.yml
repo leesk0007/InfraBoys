@@ -30,7 +30,7 @@ jobs:
       - name: DB 이미지 빌드 & Push
         uses: docker/build-push-action@v5
         with:
-          context: docker
+          context: .
           file: docker/Dockerfile.db
           push: true
           tags: |

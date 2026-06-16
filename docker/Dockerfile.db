@@ -1,2 +1,2 @@
 FROM postgres:16
-COPY eventdb.sql /docker-entrypoint-initdb.d/init.sql
+COPY app/src/init_db.sql /docker-entrypoint-initdb.d/init.sql

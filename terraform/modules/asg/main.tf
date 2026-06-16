@@ -25,8 +25,14 @@ resource "aws_launch_template" "lt" {
 
   vpc_security_group_ids = [var.security_group_id]
   key_name               = var.key_name
-  
-  
+
+  dynamic "iam_instance_profile" {
+    for_each = var.iam_instance_profile != null ? [var.iam_instance_profile] : []
+    content {
+      name = iam_instance_profile.value
+    }
+  }
+
   user_data = base64encode(var.user_data)
 
   # 시작 템플릿을 통해 생성될 리소스에 대한 상태 태그 설정
