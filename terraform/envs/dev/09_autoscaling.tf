@@ -41,7 +41,7 @@ module "asg" {
 
   user_data = <<-EOF
     #!/bin/bash
-    systemctl start docker
+    until docker info >/dev/null 2>&1; do sleep 1; done
 
     aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com
 
