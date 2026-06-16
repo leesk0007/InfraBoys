@@ -64,8 +64,8 @@ jobs:
             -d @discord-payload.json \
             "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
-# 빌드 성공 후 자동으로 Instance Refresh 실행
-deploy:
-  needs: build
-  uses: ./.github/workflows/app-deploy.yml
-  secrets: inherit
+  # 빌드 성공 후 자동으로 Instance Refresh 실행
+  deploy:
+    needs: build
+    uses: ./.github/workflows/app-deploy.yml
+    secrets: inherit
