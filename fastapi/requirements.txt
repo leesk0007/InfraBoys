@@ -6,3 +6,6 @@ apscheduler
 ntplib
 pytz
 boto3
+requests
+google-genai
+psycopg2-binary

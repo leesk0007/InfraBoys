@@ -79,16 +79,17 @@ services:
   # grafana, cicd fastapi
   # -----------------------------
   fastapi:
-    build: ./mgmt_settings/fastapi
+    build: ./fastapi
     container_name: fastapi
     ports:
       - "8001:8001"
     volumes:
       - ./fastapi/src:/app
-    env_file:                             
-      - ./fastapi/.env   
+    env_file:
+      - ./fastapi/.env
     restart: unless-stopped
-
+    networks:
+      - monitoring
   # -------------------------------------------------
   # Management Runner
   # Terraform / Ansible 실행 환경
@@ -145,4 +146,7 @@ networks:
   #
   # 컨테이너 간 통신용 네트워크
   project2-network:
+    driver: bridge
+
+  monitoring:
     driver: bridge

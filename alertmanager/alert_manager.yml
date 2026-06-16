@@ -33,18 +33,22 @@ route:
       receiver: 'discord-webhook'
 
     - match:
-        action: scale_in
+        action: scale_in        
       receiver: scale-in-webhook
 
     - match:
-        action: scale_out
+        action: scale_out        
       receiver: scale-out-webhook
+
+    - match:           
+        severity: critical        
+      receiver: troubleshoot-webhook
 
 # aiops 부분 routes 추후에 적어야함
 
-============================================
-Receiver 정의 - 알람을 받는 대상
-============================================
+# ============================================
+# Receiver 정의 - 알람을 받는 대상
+# ============================================
 receivers:
   # =========================
   # aiops api 활용을 위한 부분
@@ -62,10 +66,10 @@ receivers:
         send_resolved: true
         title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
         message: |-
-        {{ range .Alerts -}}
-        **레벨:** {{ .Labels.level }}
-        **액션:** {{ .Labels.action }}
-        {{ end }}
+          {{ range .Alerts -}}
+          **레벨:** {{ .Labels.level }}
+          **액션:** {{ .Labels.action }}
+          {{ end }}
           
   - name: 'scale-out-webhook'
     webhook_configs:
