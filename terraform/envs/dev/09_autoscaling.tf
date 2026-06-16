@@ -37,31 +37,49 @@ module "asg" {
     module.project02_alb.target_group_arn
   ]
 
+  iam_instance_profile = aws_iam_instance_profile.ec2_discovery_profile.name
+
   user_data = <<-EOF
     #!/bin/bash
-    # Docker는 packer AMI에 이미 설치되어 있음
     systemctl start docker
+
+    aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com
 
     mkdir -p /home/ec2-user/app
     cd /home/ec2-user/app
 
     cat <<'NGINX' > nginx.conf
-    user nginx;
-    worker_processes auto;
-    events { worker_connections 1024; }
-    http {
-        server {
-            listen 80;
-            location / {
-                proxy_pass         http://app:8000;
-                proxy_set_header   Host $host;
-                proxy_set_header   X-Real-IP $remote_addr;
-                proxy_read_timeout 10s;
-            }
-            location /health {
-                proxy_pass http://app:8000/health;
-                access_log off;
-            }
+    upstream fastapi {
+        server app:8000;
+    }
+
+    server {
+        listen 80;
+
+        location /timesale {
+            proxy_pass         http://fastapi;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_read_timeout 5s;
+        }
+
+        location /orders {
+            proxy_pass         http://fastapi;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_read_timeout 30s;
+        }
+
+        location / {
+            proxy_pass         http://fastapi;
+            proxy_set_header   Host $host;
+            proxy_set_header   X-Real-IP $remote_addr;
+            proxy_read_timeout 10s;
+        }
+
+        location /health {
+            proxy_pass http://fastapi/health;
+            access_log off;
         }
     }
     NGINX
@@ -69,23 +87,27 @@ module "asg" {
     cat <<'COMPOSE' > docker-compose.yml
     services:
       app:
-        image: [APP_IMAGE]
+        image: 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com/project02-was-repo:latest
         environment:
-          - DATABASE_URL=postgresql://${var.db_user}:${var.db_password}@${module.project02_db_ec2.private_ip}:5432/eventdb
+          - DB_URL=postgresql://${var.db_user}:${var.db_password}@${module.project02_db_ec2.private_ip}:5432/eventdb
         restart: always
+        deploy:
+          resources:
+            limits:
+              memory: 512m
+              cpus: "0.8"
 
       nginx:
-        image: nginx:latest
-        container_name: nginx
+        image: nginx:alpine
         ports:
           - "80:80"
         volumes:
-          - ./nginx.conf:/etc/nginx/nginx.conf:ro
+          - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
         depends_on:
           - app
         restart: always
 
-      node-exporter:
+      node_exporter:
         image: prom/node-exporter:latest
         container_name: node-exporter
         ports:

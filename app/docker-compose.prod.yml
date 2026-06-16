@@ -1,0 +1,37 @@
+# 프로덕션용 (ASG EC2) — db 없음, RDS 외부 연결
+# Packer AMI에 이미지 pre-pull 됨
+# 실행: UserData에서 docker compose -f docker-compose.prod.yml up -d
+
+services:
+
+  app:
+    image: jj3061/fastapi-app:latest
+    environment:
+      - DB_URL=${DB_URL}
+    ports:
+      - "8000:8000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.8"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - /home/ec2-user/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    restart: always
+
+  node_exporter:
+    image: prom/node-exporter
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro
+    command: --path.rootfs=/host
+    restart: always

@@ -1,0 +1,71 @@
+name: "App Image Build & Push"
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "app/src/**"
+      - "app/Dockerfile"
+      - "app/requirements.txt"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+    env:
+      AWS_DEFAULT_REGION: ap-northeast-2
+      AWS_REGION: ap-northeast-2
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: AWS ECR 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Docker Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: App 이미지 빌드 & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: app
+          file: app/Dockerfile
+          push: true
+          tags: |
+            644724502235.dkr.ecr.ap-northeast-2.amazonaws.com/project02-was-repo:latest
+            644724502235.dkr.ecr.ap-northeast-2.amazonaws.com/project02-was-repo:${{ github.sha }}
+
+      - name: Send Build Success Notification
+        if: success()
+        run: |
+          MESSAGE="🏗️ [App 이미지 빌드 완료 — 배포 시작]
+          - 이미지: project02-was-repo:latest
+          - 트리거: ${{ github.actor }}
+          - 커밋: ${{ github.sha }}"
+
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Send Build Failure Notification
+        if: failure()
+        run: |
+          MESSAGE="❌ [App 이미지 빌드 실패]
+          - 실행자: ${{ github.actor }}
+          GitHub Actions 로그를 확인하십시오."
+
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+# 빌드 성공 후 자동으로 Instance Refresh 실행
+deploy:
+  needs: build
+  uses: ./.github/workflows/app-deploy.yml
+  secrets: inherit

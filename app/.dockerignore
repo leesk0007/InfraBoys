@@ -1,0 +1,13 @@
+Dockerfile
+.dockerignore
+*.md
+*.sql
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git
+.gitignore
+.env
+*.pem
+*.key
