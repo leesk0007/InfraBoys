@@ -29,13 +29,18 @@ resource "aws_instance" "nat" {
               systemctl enable iptables
               systemctl start iptables
               
-              # 기본 네트워크 인터페이스 찾기 (예: ens5)
-              INTERFACE=$(ip route | grep default | awk '{print $5}')
+              # 2. iptables 포워딩 전면 허용 (이 부분이 핵심!)
+              iptables -P FORWARD ACCEPT
+              iptables -I FORWARD -j ACCEPT
               
-              # 마스커레이딩(NAT) 룰 추가
-              iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE
+              # 3. 마스커레이딩(NAT) 룰 추가 (VPC 내부망 대역 전체를 소스로 지정)
+              iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -j MASQUERADE
+              
+              # 4. MTU 문제 해결을 위한 TCP MSS Clamping 추가 (매우 중요: HTTPS 접속 멈춤 현상 방지)
+              iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+              
               iptables-save > /etc/sysconfig/iptables
-              
+
               # Tailscale 설치 및 Subnet Router 설정
               yum install -y yum-utils
               yum-config-manager --add-repo https://pkgs.tailscale.com/stable/amazon-linux/2/tailscale.repo
