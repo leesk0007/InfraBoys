@@ -40,6 +40,7 @@ module "project02_nat_instance" {
   subnet_id          = module.project02_public_subnet_a.subnet_id
   security_group_ids = [module.project02_nat_sg.sg_id]
   tailscale_auth_key = var.tailscale_auth_key
+  key_name           = module.project02_was_ec2_key.key_name
 }
 
 

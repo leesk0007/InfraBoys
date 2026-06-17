@@ -17,7 +17,13 @@ module "project02_nat_sg" {
       to_port     = 0
       protocol    = "-1"
       cidr_blocks = ["10.0.0.0/16", "100.64.0.0/10"]
-      description = "Allow all traffic from VPC internal and Tailscale for NAT routing"
+    },
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+      description = "Temporary SSH access for debugging"
     }
   ]
   # 아웃바운드(나가는 트래픽) 규칙: 어디로든 자유롭게 나갈 수 있도록 허용합니다.
@@ -91,6 +97,14 @@ module "project02_db_sg" {
       protocol        = "tcp"
       security_groups = [module.project02_was_sg.sg_id]
       description     = "WAS to DB Access"
+    },
+    # 1.5. Tailscale 및 내부망을 통한 DB(5432) 접근을 추가로 허용합니다. (개발/디버깅용)
+    {
+      from_port   = 5432
+      to_port     = 5432
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16", "100.64.0.0/10"]
+      description = "DB Access from Tailscale and Internal VPC"
     },
     # 2. 내부망을 통한 관리자 SSH 접근 허용 (장애 조치 및 세팅 목적)
     {
