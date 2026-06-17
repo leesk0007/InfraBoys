@@ -18,7 +18,7 @@ module "asg" {
 
   # 최소 1대를 유지하고, 최대 7대까지 자동으로 늘어납니다.
   desired_capacity = var.desired_capacity
-  min_size         = 1
+  min_size         = 2
   max_size         = 7
 
   # 인스턴스가 생성될 프라이빗 서브넷 위치 (AZ-a 단일 구성)
