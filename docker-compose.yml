@@ -4,101 +4,92 @@ services:
   # Prometheus
   # 메트릭을 수집하는 모니터링 서버
   # -------------------------------------------------
-  prometheus:
-
-    # Prometheus 공식 이미지 사용
-    image: prom/prometheus
-
-    # 컨테이너 이름
+  prometheus_settings:
+    image: prom/prometheus:v3.12.0
     container_name: prometheus
-
-    # 호스트포트:컨테이너포트
+    restart: unless-stopped
     ports:
       - "9090:9090"
-
     volumes:
+    # 세팅값 들어가있는 yml 파일을 컨테이너 내부에 매핑
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    # alert 규칙이 들어가있는 yml 파일을 컨테이너 내부에 매핑
+      - ./prometheus/alert_rules:/etc/prometheus/rules:ro
+    # 수동으로 생성한 volume에 prometheus 컨테이너 정보를 저장
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB' 
+      - '--web.enable-lifecycle'
 
-      # Bind Mount
-      # VM의 설정 파일을 컨테이너 내부 설정파일로 연결
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-
+    networks:
+      - monitoring
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_DEFAULT_REGION
 
-    # 컨테이너 재시작 정책
-    restart: unless-stopped
-
-    # 모니터링 네트워크 참여
-    networks:
-      - project2-network
-
   # -------------------------------------------------
   # AlertManager
   # Prometheus Alert 처리
   # -------------------------------------------------
-  alertmanager:
-
-    image: prom/alertmanager
-
-    container_name: alertmanager
-
-    ports:
-      - "9093:9093"
-
-    volumes:
-
-      # Bind Mount
-      # AlertManager 설정 파일 연결
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-
+  alert_manager_settings:
+    image: prom/alertmanager:v0.32.1
+    container_name: alert_manager
     restart: unless-stopped
-
     networks:
-      - project2-network
+      - monitoring
+    ports:
+    - "9093:9093" 
+    volumes:
+    # alert manager 세팅 값 yml파일 넣기
+      - ./alertmanager/alert_manager.yml:/etc/alertmanager/alertmanager.yml:ro
+    # alert manager 로그 기록 넘길 volume 마운트
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--cluster.listen-address='
 
   # -------------------------------------------------
   # Grafana
   # 모니터링 대시보드
   # -------------------------------------------------
-  grafana:
-
-    image: grafana/grafana
-
+  grafana_settings:
+    image: grafana/grafana:11.6.15
     container_name: grafana
-
-    ports:
-      - "3000:3000"
-
-    volumes:
-
-      # Docker Volume
-      # Grafana 내부 데이터 저장
-      #
-      # 저장되는 데이터 예시
-      # - 사용자 계정
-      # - 비밀번호
-      # - 대시보드
-      # - 데이터소스
-      # - 알람 설정
-      #
-      # 컨테이너 삭제 후 재생성해도 유지됨
-      - grafana-storage:/var/lib/grafana
-
-      # Bind Mount
-      # Grafana Provisioning 자동 설정
-      #
-      # 예시
-      # - datasource 자동 등록
-      # - dashboard 자동 등록
-      - ./grafana/provisioning:/etc/grafana/provisioning
-
     restart: unless-stopped
-
     networks:
-      - project2-network
+      - monitoring
+    ports:
+    - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin           
+      - GF_SECURITY_ADMIN_PASSWD=admin 
+      - GF_INSTALL_PLUGINS=marcusolsson-dynamictext-panel 
+      - GF_PANELS_DISABLE_SANITIZE_HTML=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/grafana_dashboard.json
 
+  # -----------------------------
+  # grafana, cicd fastapi
+  # -----------------------------
+  fastapi:
+    build: ./fastapi
+    container_name: fastapi
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./fastapi/src:/app
+    env_file:
+      - ./fastapi/.env
+    restart: unless-stopped
+    networks:
+      - monitoring
   # -------------------------------------------------
   # Management Runner
   # Terraform / Ansible 실행 환경
@@ -138,10 +129,9 @@ services:
 # Docker Named Volume
 # -------------------------------------------------
 volumes:
-
-  # Grafana 영구 저장소
-  grafana-storage:
-    driver: local
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
 
 # -------------------------------------------------
 # Docker Network
@@ -156,4 +146,7 @@ networks:
   #
   # 컨테이너 간 통신용 네트워크
   project2-network:
+    driver: bridge
+
+  monitoring:
     driver: bridge

@@ -1,0 +1,85 @@
+# ============================================
+# Alertmanager 설정 파일
+# 역할: Prometheus에서 받은 알람을 FastAPI 웹훅으로 전달(test는 discord로 전달)
+# ============================================
+
+global:
+  # 알람이 해결됐다고 판단하는 시간 (이 시간 동안 알람 안 오면 resolved)
+  resolve_timeout: 5m
+
+# ============================================
+# 라우팅 설정 - 어떤 알람을 어디로 보낼지
+# ============================================
+route:
+  # /prometheus/alert_rules에 alert_rules파일에 정의되어있는 태그로 분류
+  group_by: ['alertname', 'severity']
+  
+  # 첫 알람 발생 후 그룹화 위해 대기하는 시간
+  group_wait: 30s
+
+  # 같은 알람이 계속 발생할 때 재전송 간격
+  repeat_interval: 30s
+  
+  # 기본 receiver (어디서도 매칭 안 되면 여기로)
+  receiver: 'discord-webhook'
+  
+  # 상위에 있는 route 블럭은 prometheus에서 알림을 받는 부분이고
+  # 밑에 있는 routes 블럭은 cpu / memory 등 상황에 따라 분류하고 싶은 알림을 나누는 섹션
+  
+  # 세부 라우팅 규칙 (필요시 알람별로 다른 곳으로 보내기)
+  routes:
+    - match:
+        alertname: Discord 알람
+      receiver: 'discord-webhook'
+
+    - match:
+        action: scale_in        
+      receiver: scale-in-webhook
+
+    - match:
+        action: scale_out        
+      receiver: scale-out-webhook
+
+    - match:           
+        severity: critical        
+      receiver: troubleshoot-webhook
+
+# aiops 부분 routes 추후에 적어야함
+
+# ============================================
+# Receiver 정의 - 알람을 받는 대상
+# ============================================
+receivers:
+  # =========================
+  # aiops api 활용을 위한 부분
+  # =========================
+  - name: 'troubleshoot-webhook'
+    webhook_configs:
+      - url: 'http://fastapi:8001/webhook/troubleshoot'
+        # 알람 해결됐을 때도 알림 보낼지
+        send_resolved: true
+        max_alerts: 0  # 0 = 제한 없음
+
+  - name: 'discord-webhook'
+    discord_configs:
+      - webhook_url: 'https://discord.com/api/webhooks/1512374911241293834/Pp5Ia8f1cgNCzoeGMXMPCvB7Nj2MhyKJmG2Js1rldqVDIHRUcEeEixAAf9jEmhURjL5Z'
+        send_resolved: true
+        title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        message: |-
+          {{ range .Alerts -}}
+          **레벨:** {{ .Labels.level }}
+          **액션:** {{ .Labels.action }}
+          {{ end }}
+          
+  - name: 'scale-out-webhook'
+    webhook_configs:
+      - url: 'http://fastapi:8001/webhook/scale-out'
+        send_resolved: true
+
+  - name: 'scale-in-webhook'
+    webhook_configs:
+      - url: 'http://fastapi:8001/webhook/scale-in'
+        send_resolved: true
+
+
+

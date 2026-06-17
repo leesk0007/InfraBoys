@@ -1,0 +1,108 @@
+# =======================================================================
+#  prometheus가 slack / discord / fastapi 등으로 보내는 알람을 관리하는 yml
+# =======================================================================
+groups:
+  # ============================================================
+  #  Recording Rules (현재값 / 예측값 미리 계산)
+  # ============================================================
+  - name: node_usage_recording
+    interval: 30s
+    rules:
+    # cpu
+      - record: present_average_cpu
+        expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100
+
+      - record: future_average_cpu
+        expr: predict_linear(present_average_cpu[30m:], 5 * 60)
+
+    # memory
+      - record: present_average_memory
+        expr: avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)
+
+      - record: future_average_memory
+        expr: predict_linear(present_average_memory[30m:], 5 * 60)
+
+  # ============================================================
+  #  예측 + 현재값 알람 (현재값 OR 5분 후 예측값)
+  #  - LEVEL 1: 50% 초과 ~ 60% 이하 / 5분 지속 → scale out
+  #  - LEVEL 2: 60% 초과 ~ 75% 이하 / 3분 지속 → scale out
+  # ============================================================
+  - name: node_predict_alerts
+    interval: 30s
+    rules:
+      # ---------- LEVEL 1: 50 < x <= 60 ----------
+      - alert: Level1-cpu
+        expr: |
+          (
+            (present_average_cpu > 50 and present_average_cpu <= 60)
+            or
+            (future_average_cpu  > 50 and future_average_cpu  <= 60)
+          )
+          unless
+          (present_average_cpu > 60 or future_average_cpu > 60)
+        for: 5m
+        labels:
+          severity: warning
+          level: "1"
+          action: scale_out
+
+      - alert: Level1-memory
+        expr: |
+          (
+            (present_average_memory > 50 and present_average_memory <= 60)
+            or
+            (future_average_memory  > 50 and future_average_memory  <= 60)
+          )
+          unless
+          (present_average_memory > 60 or future_average_memory > 60)
+        for: 5m
+        labels:
+          severity: warning
+          level: "1"
+          action: scale_out
+     # ---------- LEVEL 2: 60 < x <= 75 ----------
+      - alert: Level2-cpu
+        expr: |
+          (present_average_cpu > 60 and present_average_cpu <= 75)
+          or
+          (future_average_cpu  > 60 and future_average_cpu  <= 75)
+        for: 3m
+        labels:
+          severity: warning
+          level: "2"
+          action: scale_out
+
+      - alert: Level2-memory
+        expr: |
+          (present_average_memory > 60 and present_average_memory <= 75)
+          or
+          (future_average_memory  > 60 and future_average_memory  <= 75)
+        for: 3m
+        labels:
+          severity: warning
+          level: "2"
+          action: scale_out
+  # ============================================================
+  #  정상화 알람 (scale in 트리거)
+  #  - CPU/메모리 모두 50% 이하로 5분 이상 지속 시 발동
+  # ============================================================
+  - name: Normarlized-cpu
+    interval: 30s
+    rules:
+      - alert: CPUNormalized
+        expr: |
+          (present_average_cpu <= 50)
+          and
+          (future_average_cpu  <= 50)
+        for: 5m
+        labels:
+          action: scale_in
+
+      - alert: Normalized-memory
+        expr: |
+          (present_average_memory <= 50)
+          and
+          (future_average_memory  <= 50)
+        for: 5m
+        labels:
+          action: scale_in

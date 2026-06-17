@@ -7,6 +7,18 @@ global:
   # 메트릭 수집 주기
   scrape_interval: 15s
 
+# ----------------------------
+# alertmanagers에게 신호 보내기
+# ----------------------------
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - 'alert_manager:9093'
+            
+# 어떤 규칙으로 보낼지 정의된 파일 읽게하기
+rule_files:
+  - /etc/prometheus/rules/*.yml
 # -------------------------------------------------
 # 수집 대상
 # -------------------------------------------------
