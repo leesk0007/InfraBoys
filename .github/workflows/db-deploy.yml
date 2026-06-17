@@ -8,6 +8,9 @@ jobs:
     runs-on: self-hosted
 
     env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-northeast-2
       TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
       TF_VAR_db_user:            ${{ secrets.DB_USER }}
       TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
