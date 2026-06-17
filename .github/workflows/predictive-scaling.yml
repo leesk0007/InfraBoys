@@ -1,0 +1,169 @@
+name: "Predictive Scaling"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Scaling Stage (0=Reset, 1, 2)"
+        required: true
+        type: choice
+        options: ['0', '1', '2']
+        default: '1'
+      reason:
+        description: "Reason for scaling"
+        required: false
+        default: "Manual predictive scaling"
+
+  repository_dispatch:
+    types: [predictive_scale, scale-out, scale-in]
+
+concurrency:
+  group: terraform-state
+  cancel-in-progress: false
+
+jobs:
+  scale:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    
+    env:
+      TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+      TF_VAR_db_user:            ${{ secrets.DB_USER }}
+      TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
+      
+    steps:
+      - name: Parse Inputs
+        id: parse
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            # Handle different payload structures
+            EVENT_TYPE="${{ github.event.action }}"
+            STAGE="${{ github.event.client_payload.stage || github.event.client_payload.level || '-1' }}"
+            REQUIRE_EC2="${{ github.event.client_payload.require_ec2 || '0' }}"
+            SENDER="${{ github.event.client_payload.sender || 'External System' }}"
+            
+            # Default logic for stage if not provided
+            if [ "$STAGE" == "-1" ]; then
+              if [ "$EVENT_TYPE" == "scale-in" ]; then
+                STAGE="0" # Default to Reset for scale-in
+              else
+                STAGE="1" # Default to Stage 1 for others
+              fi
+            fi
+            
+    
+            REASON="${{ github.event.client_payload.reason || '' }}"
+            if [ -z "$REASON" ]; then
+              REASON="Triggered by $SENDER ($EVENT_TYPE)"
+            fi
+
+          else
+            STAGE="${{ github.event.inputs.stage }}"
+            REASON="${{ github.event.inputs.reason }}"
+            REQUIRE_EC2="0"
+          fi
+          
+          echo "stage=$STAGE" >> "$GITHUB_OUTPUT"
+          echo "require_ec2=$REQUIRE_EC2" >> "$GITHUB_OUTPUT"
+          
+          # 띄어쓰기나 줄바꿈이 있는 Reason을 안전하게 넘기기 위한 EOF 처리
+          {
+            echo "reason<<EOF"
+            echo "$REASON"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          
+          # Stage to Capacity mapping
+          case $STAGE in
+            0) CAPACITY=1 ;;
+            1) CAPACITY=2 ;;
+            2) CAPACITY=4 ;;
+            *) CAPACITY=-1 ;; # Use -1 for relative scaling
+          esac
+          
+          echo "capacity=$CAPACITY" >> "$GITHUB_OUTPUT"
+          
+          echo "=== 📥 Scaling Request Processed ==="
+          echo "Stage: $STAGE"
+          echo "Target Capacity (if Stage): $CAPACITY"
+          echo "Require EC2 (Relative): $REQUIRE_EC2"
+          echo "Reason: $REASON"
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize Terraform
+        working-directory: terraform/envs/dev
+        run: terraform init
+
+      - name: Check Current Capacity
+        id: current
+        run: |
+          CURRENT=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names project02-asg \
+            --query 'AutoScalingGroups[0].DesiredCapacity' \
+            --output text)
+          
+          STAGE="${{ steps.parse.outputs.stage }}"
+          REQUIRE_EC2="${{ steps.parse.outputs.require_ec2 }}"
+          PARSE_CAPACITY="${{ steps.parse.outputs.capacity }}"
+          
+          if [ "$PARSE_CAPACITY" != "-1" ]; then
+            TARGET=$PARSE_CAPACITY
+          else
+            # Relative scaling
+            TARGET=$((CURRENT + REQUIRE_EC2))
+          fi
+          
+          # Ensure target is at least 1
+          if [ "$TARGET" -lt 1 ]; then TARGET=1; fi
+          
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "capacity=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "Current: $CURRENT -> Target: $TARGET"
+          
+          if [ "$CURRENT" == "$TARGET" ]; then
+            echo "::warning::Current capacity already matches target. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply Scaling
+        if: steps.current.outputs.skip == 'false'
+        working-directory: terraform/envs/dev
+        run: |
+          terraform apply -auto-approve \
+            -target="module.asg.aws_autoscaling_group.asg" \
+            -var="desired_capacity=${{ steps.current.outputs.capacity }}"
+          
+          echo "Scaling applied. Target capacity: ${{ steps.current.outputs.capacity }}"
+
+      - name: Send Notification
+        if: steps.current.outputs.skip == 'false'
+        run: |
+          MESSAGE="[예측 스케일링 실행]
+          - 사유: ${{ steps.parse.outputs.reason }}
+          - 용량 변경: ${{ steps.current.outputs.current }} -> ${{ steps.current.outputs.capacity }}대"
+          
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Send Final Notification
+        if: always()
+        run: |
+          MESSAGE="[예측 스케일링 종료]
+          - 실행 결과: ${{ job.status }}
+          - 최종 목표 용량: ${{ steps.current.outputs.capacity || 'N/A' }}대"
+          
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
