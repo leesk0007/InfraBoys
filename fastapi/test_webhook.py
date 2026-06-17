@@ -56,6 +56,6 @@ fake_alert = {
     ]
 }
  
-res = requests.post("http://172.16.8.200:8001/alert", json=fake_alert)
+res = requests.post("http://localhost:8001/webhook/troubleshoot", json=fake_alert)
 print("응답 코드:", res.status_code)
 print("응답 내용:", res.json())

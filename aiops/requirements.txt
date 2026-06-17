@@ -1,5 +1,0 @@
-fastapi
-uvicorn
-requests
-google-genai
-psycopg2-binary
