@@ -1,0 +1,79 @@
+name: "DB Deploy (인스턴스 재생성)"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    env:
+      TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+      TF_VAR_db_user:            ${{ secrets.DB_USER }}
+      TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
+
+    defaults:
+      run:
+        working-directory: ./terraform/envs/dev
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Terraform Init
+        run: terraform init -upgrade
+
+      - name: DB EC2 재생성
+        run: |
+          terraform apply \
+            -replace=module.project02_db_ec2.aws_instance.this \
+            -auto-approve
+
+      - name: EC2 Running 상태 대기
+        run: |
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:Name,Values=project02_db_ec2" \
+              "Name=instance-state-name,Values=pending,running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+
+          echo "인스턴스 ID: $INSTANCE_ID"
+          aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+          echo "✅ EC2 Running 확인"
+
+      - name: DB 컨테이너 기동 대기
+        run: |
+          echo "⏳ user_data 실행 대기 (ECR pull + 컨테이너 시작, 90초)..."
+          sleep 90
+          echo "✅ 대기 완료"
+
+      - name: Send Success Notification
+        if: success()
+        run: |
+          MESSAGE="✅ [DB 배포 완료]
+          - 트리거: ${{ github.actor }}
+          - DB EC2 재생성 및 ECR 최신 이미지로 postgres 컨테이너 시작 완료"
+
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Send Failure Notification
+        if: failure()
+        run: |
+          MESSAGE="❌ [DB 배포 실패]
+          - 실행자: ${{ github.actor }}
+          - 로그: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d @discord-payload.json \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Cleanup Terraform Cache
+        if: always()
+        run: rm -rf .terraform .terraform.lock.hcl
