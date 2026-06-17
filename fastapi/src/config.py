@@ -169,3 +169,28 @@ async def trigger_github_action(event_type: str, payload: dict):
             raise HTTPException(500, f"GitHub API failed: {r.text}")
     print(f" GitHub {event_type} 성공!")
     return {"triggered": True}
+
+# ============================================
+# 런북 → GitHub Actions 매핑 (라우팅)
+# ============================================
+RUNBOOK_ACTION_MAP = {
+    "runbook-scale-out.yml": {
+        "event_type": "scale-out",  # predictive-scaling.yml 을 트리거함
+        "payload": {
+            "require_ec2": 2, 
+            "sender": "AIOps Discord Bot",
+            "reason": "AI 장애 분석 결과에 따른 스케일 아웃 승인"
+        },
+        "description": "EC2 인스턴스 2대 스케일 아웃"
+    },
+    "runbook-db-restart.yml": {
+        "event_type": "db-restart",
+        "payload": {"sender": "AIOps Discord Bot"},
+        "description": "DB 인스턴스 재시작"
+    },
+    "runbook-rollback.yml": {
+        "event_type": "app-rollback",
+        "payload": {"sender": "AIOps Discord Bot"},
+        "description": "이전 버전 애플리케이션 롤백"
+    }
+}

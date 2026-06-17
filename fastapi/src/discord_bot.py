@@ -144,22 +144,32 @@ class RunbookApprovalView(discord.ui.View):
         self.responded = True
         
         runbook = self.result.get("runbook", "알 수 없는 런북")
+        mapping = config.RUNBOOK_ACTION_MAP.get(runbook)
+        
+        if not mapping:
+            await interaction.response.edit_message(
+                content=f"❌ **지원하지 않는 런북입니다:** `{runbook}`",
+                view=None
+            )
+            return
         
         # 버튼 비활성화 + 실행 중 표시
         await interaction.response.edit_message(
-            content=f"⏳ **런북 실행 대기 중...** (승인: {interaction.user.name})",
+            content=f"⏳ **GitHub Actions 실행 요청 중...**\n- 액션: {mapping['description']}\n- 승인자: {interaction.user.name}",
             view=None
         )
         
-        # 실제 로직은 나중에 구현 (GitHub Actions API vs 로컬 스크립트)
-        # 현재는 테스트를 위한 모의(Mock) 응답 전송
-        await asyncio.sleep(2) # 실행 시뮬레이션
-        await interaction.followup.send(
-            f"✅ **[테스트] 런북 실행 승인됨!**\n"
-            f"- 대상 런북: `{runbook}`\n"
-            f"- 승인자: {interaction.user.name}\n"
-            f"*(현재는 테스트 모드이므로 실제 인프라에 반영되지 않습니다.)*"
-        )
+        # 실제 GitHub Actions API 호출
+        try:
+            await config.trigger_github_action(mapping["event_type"], mapping["payload"])
+            
+            await interaction.followup.send(
+                f"✅ **런북 실행 요청 성공!**\n"
+                f"- GitHub Actions에서 `{mapping['event_type']}` 이벤트가 트리거되었습니다.\n"
+                f"- 대상 런북: `{runbook}`"
+            )
+        except Exception as e:
+            await interaction.followup.send(f"❌ **런북 실행 요청 실패:** {e}")
     
     @discord.ui.button(label="❌ 거부", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
