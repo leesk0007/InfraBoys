@@ -119,6 +119,11 @@ services:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
       - AWS_DEFAULT_REGION
+      - TF_VAR_db_user
+      - TF_VAR_db_password
+      - TF_VAR_tailscale_auth_key
+      - INFRACOST_API_KEY
+      - DISCORD_WEBHOOK_URL
 
     restart: unless-stopped
 
