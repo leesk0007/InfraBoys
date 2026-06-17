@@ -1,0 +1,46 @@
+---
+# [장애 유형] DB 프로세스 다운 (Connection refused / Can't connect)
+# [실행 방법] ansible-playbook runbooks/db_restart_container.yml
+# [효과] postgres 컨테이너 재시작 후 정상 기동 확인
+
+- name: DB 프로세스 다운 대응 — postgres 컨테이너 재시작
+  hosts: db
+  become: yes
+
+  vars:
+    db_user: "postgres"
+    db_name: "eventdb"
+    container_name: "postgres"
+    health_check_retries: 10
+    health_check_delay: 5
+
+  tasks:
+    - name: 컨테이너 현재 상태 확인
+      command: docker inspect --format="{{ '{{' }}.State.Status{{ '}}' }}" {{ container_name }}
+      register: container_status
+      changed_when: false
+      failed_when: false
+
+    - name: 현재 상태 출력
+      debug:
+        msg: "컨테이너 상태: {{ container_status.stdout }}"
+
+    - name: postgres 컨테이너 재시작
+      command: docker restart {{ container_name }}
+      register: restart_result
+
+    - name: 재시작 결과 출력
+      debug:
+        msg: "{{ restart_result.stdout }}"
+
+    - name: postgres 정상 기동 대기
+      command: >
+        docker exec {{ container_name }} pg_isready -U {{ db_user }} -d {{ db_name }}
+      register: pg_ready
+      until: pg_ready.rc == 0
+      retries: "{{ health_check_retries }}"
+      delay: "{{ health_check_delay }}"
+
+    - name: 복구 완료 확인
+      debug:
+        msg: "✅ postgres 정상 기동 확인 — {{ pg_ready.stdout }}"
