@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime, timedelta
-import os, re
+import os, re, urllib.request
 
 app = FastAPI(title="Infraboy Shop")
 
@@ -94,6 +94,16 @@ def index(): return FileResponse("static/index.html")
 
 @app.get("/health")
 def health(): return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+@app.get("/server-info")
+def server_info():
+    try:
+        ip = urllib.request.urlopen(
+            "http://169.254.169.254/latest/meta-data/local-ipv4", timeout=1
+        ).read().decode()
+    except:
+        ip = "unknown"
+    return {"private_ip": ip}
 
 @app.get("/categories")
 def categories(): return {"data": CATEGORIES}

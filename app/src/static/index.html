@@ -21,6 +21,7 @@
     .user-badge span { color: white; font-weight: 600; }
     .btn-logout { background: transparent; color: #aaa; border: 1px solid #444; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .btn-logout:hover { color: white; border-color: #aaa; }
+    .server-badge { font-size: 11px; color: #27ae60; background: rgba(39,174,96,0.15); border: 1px solid rgba(39,174,96,0.3); padding: 3px 10px; border-radius: 20px; font-family: monospace; }
     .cart-btn { position: relative; background: transparent; border: none; color: white; font-size: 22px; cursor: pointer; padding: 4px 8px; }
     .cart-count { position: absolute; top: -2px; right: -2px; background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 
@@ -258,6 +259,7 @@
 <!-- 헤더 -->
 <header>
   <h1 onclick="goHome()">🛒 InfraBoy Shop</h1>
+  <span class="server-badge" id="server-ip">⬤ ---.---.---.---</span>
   <div class="header-right" id="header-user" style="display:none">
     <div class="user-badge"><span id="hdr-name"></span><span id="hdr-role"></span> 님</div>
     <button class="cart-btn" id="cart-btn" onclick="showPage('cart')" style="display:none">
@@ -496,6 +498,9 @@ async function init() {
     state.user  = JSON.parse(user);
     showMain();
   }
+  fetch('/server-info').then(r => r.json()).then(d => {
+    document.getElementById('server-ip').textContent = '⬤ ' + d.private_ip;
+  }).catch(() => {});
 }
 
 function switchTab(tab) {
