@@ -23,6 +23,13 @@ resource "aws_instance" "this" {
     volume_type = "gp3"
   }
 
+  lifecycle {
+    ignore_changes = [
+      ami,
+      user_data
+    ]
+  }
+
   tags = merge(
     {
       Name = var.name

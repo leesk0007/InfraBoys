@@ -85,11 +85,13 @@ services:
       - "8001:8001"
     volumes:
       - ./fastapi/src:/app
+      - ./keys:/app/keys:ro
     env_file:
       - ./fastapi/.env
     restart: unless-stopped
     networks:
       - monitoring
+      - project2-network
   # -------------------------------------------------
   # Management Runner
   # Terraform / Ansible 실행 환경
