@@ -15,7 +15,7 @@ resource "aws_instance" "this" {
   vpc_security_group_ids = var.security_group_ids
   key_name               = var.key_name
   iam_instance_profile = var.iam_instance_profile
-  user_data            = var.user_data != null ? base64encode(var.user_data) : null
+  user_data_base64     = var.user_data != null ? base64encode(var.user_data) : null
   user_data_replace_on_change = true
 
   root_block_device {
