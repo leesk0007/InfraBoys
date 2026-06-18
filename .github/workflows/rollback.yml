@@ -52,8 +52,7 @@ jobs:
       - name: Apply Rollback
         working-directory: terraform/envs/dev
         run: |
-          # 긴급 롤백 시 돌아갈 기본 용량 (예: 1대)
-          # 인프라 상황에 맞게 1대 또는 3대 등으로 수정하실 수 있습니다.
+          # 긴급 롤백 시 돌아갈 기본 용량 1대
           terraform apply -auto-approve \
             -target="module.asg.aws_autoscaling_group.asg" \
             -var="desired_capacity=1"
