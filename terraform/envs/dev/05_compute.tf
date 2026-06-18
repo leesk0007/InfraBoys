@@ -32,6 +32,17 @@ module "project02_db_ec2" {
   # 스키마가 bake된 커스텀 postgres 이미지 사용 (AWS ECR에서 가져옴)
   user_data = <<-EOF
     #!/bin/bash
+    mkdir -p /home/ec2-user/.ssh
+    chmod 700 /home/ec2-user/.ssh
+    touch /home/ec2-user/.ssh/authorized_keys
+    chmod 600 /home/ec2-user/.ssh/authorized_keys
+
+    ANSIBLE_KEY="${trimspace(file(var.ansible_public_key_path))}"
+    if ! grep -qF "$ANSIBLE_KEY" /home/ec2-user/.ssh/authorized_keys; then
+      printf '\n%s\n' "$ANSIBLE_KEY" >> /home/ec2-user/.ssh/authorized_keys
+    fi
+    chown -R ec2-user:ec2-user /home/ec2-user/.ssh
+
     dnf install -y docker
     systemctl enable --now docker
     usermod -aG docker ec2-user
