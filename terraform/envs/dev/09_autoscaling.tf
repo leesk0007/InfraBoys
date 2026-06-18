@@ -41,6 +41,17 @@ module "asg" {
 
   user_data = <<-EOF
     #!/bin/bash
+    mkdir -p /home/ec2-user/.ssh
+    chmod 700 /home/ec2-user/.ssh
+    touch /home/ec2-user/.ssh/authorized_keys
+    chmod 600 /home/ec2-user/.ssh/authorized_keys
+
+    ANSIBLE_KEY="${trimspace(file(var.ansible_public_key_path))}"
+    if ! grep -qF "$ANSIBLE_KEY" /home/ec2-user/.ssh/authorized_keys; then
+      printf '\n%s\n' "$ANSIBLE_KEY" >> /home/ec2-user/.ssh/authorized_keys
+    fi
+    chown -R ec2-user:ec2-user /home/ec2-user/.ssh
+
     until docker info >/dev/null 2>&1; do sleep 1; done
 
     aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com

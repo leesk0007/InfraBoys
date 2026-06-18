@@ -22,3 +22,9 @@ variable "desired_capacity" {
   type        =  number
   default     = 2
 }
+
+variable "ansible_public_key_path" {
+  description = "ansible 공개키 경로"
+  type = string
+  default = "../../keys/ansible_key.pub"
+}
