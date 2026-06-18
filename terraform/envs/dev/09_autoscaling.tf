@@ -92,11 +92,6 @@ module "asg" {
             proxy_pass http://fastapi/health;
             access_log off;
         }
-
-        location /stub_status {
-            stub_status;
-            access_log off;
-        }
     }
     NGINX
 
@@ -139,17 +134,6 @@ module "asg" {
           - '--path.rootfs=/rootfs'
           - '--path.sysfs=/host/sys'
           - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-        restart: always
-
-      nginx_exporter:
-        image: nginx/nginx-prometheus-exporter:latest
-        container_name: nginx-exporter
-        ports:
-          - "9113:9113"
-        command:
-          - '--nginx.scrape-uri=http://nginx/stub_status'
-        depends_on:
-          - nginx
         restart: always
     COMPOSE
 
