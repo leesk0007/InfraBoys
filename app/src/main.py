@@ -98,9 +98,18 @@ def health(): return {"status": "ok", "timestamp": datetime.now().isoformat()}
 @app.get("/server-info")
 def server_info():
     try:
-        ip = urllib.request.urlopen(
-            "http://169.254.169.254/latest/meta-data/local-ipv4", timeout=1
-        ).read().decode()
+        # IMDSv2: 토큰 먼저 발급
+        token_req = urllib.request.Request(
+            "http://169.254.169.254/latest/api/token",
+            method="PUT",
+            headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"}
+        )
+        token = urllib.request.urlopen(token_req, timeout=1).read().decode()
+        ip_req = urllib.request.Request(
+            "http://169.254.169.254/latest/meta-data/local-ipv4",
+            headers={"X-aws-ec2-metadata-token": token}
+        )
+        ip = urllib.request.urlopen(ip_req, timeout=1).read().decode()
     except:
         ip = "unknown"
     return {"private_ip": ip}

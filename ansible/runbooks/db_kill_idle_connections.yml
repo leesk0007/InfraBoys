@@ -1,0 +1,50 @@
+---
+# [장애 유형] DB 커넥션 풀 고갈 (Too many connections)
+# [실행 방법] ansible-playbook runbooks/db_kill_idle_connections.yml -e "db_user=xxx db_password=xxx"
+# [효과] 5분 이상 Sleep 상태인 잉여 커넥션 일괄 강제 종료
+
+- name: DB 커넥션 풀 고갈 대응 — idle 커넥션 강제 종료
+  hosts: db
+  become: yes
+
+  vars:
+    db_user: "postgres"
+    db_name: "eventdb"
+    idle_threshold_minutes: 5
+
+  tasks:
+    - name: 현재 커넥션 상태 확인
+      command: >
+        docker exec postgres psql -U {{ db_user }} -d {{ db_name }} -c
+        "SELECT count(*), state FROM pg_stat_activity GROUP BY state ORDER BY count DESC;"
+      register: conn_status
+      changed_when: false
+
+    - name: 커넥션 현황 출력
+      debug:
+        msg: "{{ conn_status.stdout_lines }}"
+
+    - name: idle 커넥션 강제 종료
+      command: >
+        docker exec postgres psql -U {{ db_user }} -d {{ db_name }} -c
+        "SELECT pg_terminate_backend(pid)
+         FROM pg_stat_activity
+         WHERE state = 'idle'
+         AND state_change < NOW() - INTERVAL '{{ idle_threshold_minutes }} minutes'
+         AND pid <> pg_backend_pid();"
+      register: kill_result
+
+    - name: 종료 결과 출력
+      debug:
+        msg: "{{ kill_result.stdout_lines }}"
+
+    - name: 종료 후 커넥션 상태 재확인
+      command: >
+        docker exec postgres psql -U {{ db_user }} -d {{ db_name }} -c
+        "SELECT count(*), state FROM pg_stat_activity GROUP BY state ORDER BY count DESC;"
+      register: conn_after
+      changed_when: false
+
+    - name: 처리 후 커넥션 현황 출력
+      debug:
+        msg: "{{ conn_after.stdout_lines }}"
