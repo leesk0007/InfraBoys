@@ -15,6 +15,27 @@ module "project02_db_ec2_key" {
 }
 
 
+# [2] DB 데이터 영구 보존용 EBS 볼륨
+# → EC2를 destroy/재생성해도 이 볼륨은 삭제되지 않아 DB 데이터가 유지됩니다.
+resource "aws_ebs_volume" "db_data" {
+  availability_zone = data.aws_availability_zones.available.names[0]
+  size              = 20
+  type              = "gp3"
+  tags              = { Name = "project02-db-data" }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_volume_attachment" "db_data" {
+  device_name  = "/dev/sdf"
+  volume_id    = aws_ebs_volume.db_data.id
+  instance_id  = module.project02_db_ec2.instance_id
+  force_detach = true
+}
+
+
 # [3] DB (데이터베이스 서버)
 # → PostgreSQL 등 데이터베이스를 구동할 단일 서버입니다. (데이터 정합성을 위해 1대만 운영)
 module "project02_db_ec2" {
@@ -38,6 +59,17 @@ module "project02_db_ec2" {
 
     until docker info >/dev/null 2>&1; do sleep 1; done
 
+    # EBS 볼륨 마운트 (데이터 영속성)
+    DEVICE=/dev/nvme1n1
+    MOUNT_POINT=/data/postgres
+    until lsblk $DEVICE >/dev/null 2>&1; do sleep 2; done
+    if ! blkid $DEVICE | grep -q xfs; then
+      mkfs -t xfs $DEVICE
+    fi
+    mkdir -p $MOUNT_POINT
+    mount $DEVICE $MOUNT_POINT
+    echo "$DEVICE $MOUNT_POINT xfs defaults 0 0" >> /etc/fstab
+
     aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com
 
     # 컨테이너 간 통신용 네트워크
@@ -52,6 +84,7 @@ module "project02_db_ec2" {
       -e POSTGRES_PASSWORD=${var.db_password} \
       -e POSTGRES_DB=eventdb \
       -p 5432:5432 \
+      -v /data/postgres:/var/lib/postgresql/data \
       644724502235.dkr.ecr.ap-northeast-2.amazonaws.com/project02-db-repo:latest
 
     # postgres_exporter
