@@ -41,9 +41,9 @@ scrape_configs:
       - source_labels: [__meta_ec2_instance_state]
         regex: running
         action: keep
-      # 태그 Role = WAS 인 인스턴스만 수집
+      # 태그 Role = WAS 와 DB인 인스턴스 수집
       - source_labels: [__meta_ec2_tag_Role]
-        regex: WAS
+        regex: WAS|DB
         action: keep
       # 수집 타겟 IP를 프라이빗 IP로 변경
       - source_labels: [__meta_ec2_private_ip]
@@ -53,3 +53,57 @@ scrape_configs:
       # EC2의 네임 태그 확인
       - source_labels: [__meta_ec2_tag_Name]
         target_label: instance_name
+        
+  # was ec2의 nginx exporter 부분
+  - job_name: 'nginx'
+    ec2_sd_configs:
+    - region: ap-northeast-2
+      port: 9113
+    relabel_configs:
+    - source_labels: [__meta_ec2_instance_state]
+      regex: running
+      action: keep
+    - source_labels: [__meta_ec2_tag_Role]
+      regex: WAS
+      action: keep
+    - source_labels: [__meta_ec2_private_ip]
+      target_label: __address__
+      replacement: "${1}:9113"
+    - source_labels: [__meta_ec2_tag_Name]
+      target_label: instance_name
+
+  # was ec2의 process exporter 부분
+  - job_name: 'process'
+    ec2_sd_configs:
+    - region: ap-northeast-2
+      port: 9256
+    relabel_configs:
+    - source_labels: [__meta_ec2_instance_state]
+      regex: running
+      action: keep
+    - source_labels: [__meta_ec2_tag_Role]
+      regex: WAS
+      action: keep
+    - source_labels: [__meta_ec2_private_ip]
+      target_label: __address__
+      replacement: "${1}:9256"
+    - source_labels: [__meta_ec2_tag_Name]
+      target_label: instance_name
+      
+  # db ec2의 postgres exporter 부분
+  - job_name: 'postgres'
+    ec2_sd_configs:
+    - region: ap-northeast-2
+      port: 9187
+    relabel_configs:
+    - source_labels: [__meta_ec2_instance_state]
+      regex: running
+      action: keep
+    - source_labels: [__meta_ec2_tag_Role]
+      regex: DB
+      action: keep
+    - source_labels: [__meta_ec2_private_ip]
+      target_label: __address__
+      replacement: "${1}:9187"
+    - source_labels: [__meta_ec2_tag_Name]
+      target_label: instance_name

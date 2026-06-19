@@ -73,7 +73,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWD=admin 
       - GF_INSTALL_PLUGINS=marcusolsson-dynamictext-panel 
       - GF_PANELS_DISABLE_SANITIZE_HTML=true
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/final_final.json
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/infra_boys.json
 
   # -----------------------------
   # grafana, cicd fastapi

@@ -102,24 +102,71 @@ groups:
         for: 5m
         labels:
           action: scale_in
-  # ============================================================
-  # 1. EC2 인스턴스 다운 감지
-  #    - node_exporter가 일정 시간 응답 없으면 down 처리
-  #    - Auto Scaling Group 재기동 / 인스턴스 교체 트리거용
-  # ============================================================
-  - name: ec2_instance_down
+
+# ============================================================
+#  AIOps 장애 케이스별 감지 룰 (PostgreSQL 버전)
+# ============================================================
+  - name: Aiops_fault_detection
     interval: 30s
     rules:
 
-      - alert: Instance-down
-        expr: up{job="node_exporter"} == 0
-        for: 2m
-        labels:
-          action: Aiops_instance_down
+    # 1. Nginx 비정상 종료 테스트 완
+    - alert: Nginx-down
+      expr: nginx_up == 0
+      for: 30s
+      labels:
+        action: Aiops_nginx_restart
+        case: "nginx_down"
+      annotations:
+        summary: "Nginx 프로세스 종료 감지"
+        log_keyword: "Main process exited"
+
+    # 2. 디스크 용량 95% 초과 테스트 완
+    - alert: Disk-full
+      expr: (1 - node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"}) * 100 > 95
+      for: 1m
+      labels:
+        action: Aiops_disk_cleanup
+        case: "disk_full"
+      annotations:
+        summary: "디스크 사용률 95% 초과"
+        log_keyword: "No space left on device"
+
+    # 3. 좀비 프로세스 / CPU 100% 점유 테스트 완
+    - alert: ZombieProcess
+      expr: namedprocess_namegroup_states{state="Zombie", groupname=~"nginx|python.*|docker"} > 0
+      for: 2m
+      labels:
+        action: Aiops_kill_process
+        case: "zombie_process"
+      annotations:
+        summary: "좀비 프로세스 감지 ({{ $labels.groupname }})"
+
+    #  4. PostgreSQL 커넥션 풀 고갈 테스트 완
+    - alert: Postgres-connectionfullout
+      expr: |
+        sum(pg_stat_activity_count{state="active"})
+        /
+        scalar(max(pg_settings_max_connections))
+        > 0.2
+      for: 1m
+      labels:
+        action: Aiops_kill_idle_connections
+        case: "db_connection_full"
+      annotations:
+        summary: "PostgreSQL 커넥션 20% 이상 사용"
+        log_keyword: "too many connections"
 
 
-      - alert: Instance-unreachable
-        expr: absent(up{job="node_exporter"}) == 1
-        for: 2m
-        labels:
-          action: Aiops_instance_unreachable
+    #  5. PostgreSQL 프로세스 다운 테스트 완
+    - alert: Postgres-down
+      expr: pg_up == 0
+      for: 30s
+      labels:
+        action: Aiops_db_restart
+        case: "db_down"
+      annotations:
+        summary: "PostgreSQL 프로세스 다운"
+        log_keyword: "Connection refused"
+
+

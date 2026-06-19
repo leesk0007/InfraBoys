@@ -347,10 +347,16 @@ async def webhook_scale_in(request: Request):
 # ===============
 # aiops 부분
 # ===============
+last_webhook = {}
 @app.post("/aiops/webhook")
+async def aiops_webhook(request: Request):
+    global last_webhook
+    last_webhook = await request.json()
+    return {"ok": True}
 
-
-
+@app.get("/aiops/last")
+async def get_last():
+    return last_webhook
 # ============================
 # github로 요청 날리는 형식
 # ============================

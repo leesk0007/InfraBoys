@@ -36,17 +36,46 @@ module "project02_db_ec2" {
     systemctl enable --now docker
     usermod -aG docker ec2-user
 
-    # AWS ECR 로그인
+    until docker info >/dev/null 2>&1; do sleep 1; done
+
     aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com
 
-    # ECR에서 이미지 실행
+    # 컨테이너 간 통신용 네트워크
+    docker network create db-net
+
+    # postgres
     docker run -d \
       --name postgres \
+      --network db-net \
       --restart always \
       -e POSTGRES_USER=${var.db_user} \
       -e POSTGRES_PASSWORD=${var.db_password} \
       -e POSTGRES_DB=eventdb \
       -p 5432:5432 \
       644724502235.dkr.ecr.ap-northeast-2.amazonaws.com/project02-db-repo:latest
+
+    # postgres_exporter
+    docker run -d \
+      --name postgres-exporter \
+      --network db-net \
+      --restart always \
+      -e DATA_SOURCE_NAME="postgresql://${var.db_user}:${var.db_password}@postgres:5432/eventdb?sslmode=disable" \
+      -p 9187:9187 \
+      prometheuscommunity/postgres-exporter:latest
+
+    # node_exporter
+    docker run -d \
+      --name node-exporter \
+      --restart always \
+      --network host \
+      --pid host \
+      -v /proc:/host/proc:ro \
+      -v /sys:/host/sys:ro \
+      -v /:/rootfs:ro \
+      prom/node-exporter:latest \
+      --path.procfs=/host/proc \
+      --path.rootfs=/rootfs \
+      --path.sysfs=/host/sys \
+      '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
   EOF
 }
