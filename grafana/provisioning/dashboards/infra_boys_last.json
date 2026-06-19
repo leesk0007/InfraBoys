@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 7,
+  "id": 3,
   "links": [
     {
       "icon": "external link",
@@ -51,6 +51,43 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -68,37 +105,75 @@
       },
       "gridPos": {
         "h": 10,
-        "w": 15,
+        "w": 12,
         "x": 0,
         "y": 0
       },
-      "id": 348,
+      "id": 349,
       "options": {
-        "afterRender": "(function initScalingController() {\r\n\r\n  // ============ 0. 중복 root 완전 제거 ============\r\n\r\n  const allRoots = document.querySelectorAll('#scaling-duration-controller');\r\n\r\n  if (allRoots.length === 0) return;\r\n\r\n\r\n\r\n  for (let i = 0; i < allRoots.length - 1; i++) {\r\n\r\n    allRoots[i].remove();\r\n\r\n  }\r\n\r\n  const root = document.querySelector('#scaling-duration-controller');\r\n\r\n  if (!root) return;\r\n\r\n\r\n\r\n  // ============ 0-1. 중복 초기화 방지 ============\r\n\r\n  if (root.dataset.initialized === 'true') return;\r\n\r\n  root.dataset.initialized = 'true';\r\n\r\n\r\n\r\n  // ============ ✅ FastAPI 설정 ============\r\n\r\n  const API_BASE = 'http://172.19.59.142:8001/api';\r\n\r\n\r\n\r\n  // ============ 1. 요소 가져오기 ============\r\n\r\n  const currentTimeEl = root.querySelector('#currentTime');\r\n\r\n  const reserveInput = root.querySelector('#reserve-input');\r\n\r\n  const durationInput = root.querySelector('#duration-input');\r\n\r\n  const capSlider = root.querySelector('#capacity-slider');\r\n\r\n  const capValue = root.querySelector('#capValue');\r\n\r\n  const applyBtn = root.querySelector('#apply-btn');\r\n\r\n  const activeList = root.querySelector('#activeList');\r\n\r\n\r\n\r\n  if (!applyBtn || !durationInput || !capSlider || !activeList) return;\r\n\r\n\r\n\r\n  // ============ 2. CURRENT TIME ============\r\n\r\n  function updateCurrentTime() {\r\n\r\n    const now = new Date();\r\n\r\n    const hh = String(now.getHours()).padStart(2, '0');\r\n\r\n    const mm = String(now.getMinutes()).padStart(2, '0');\r\n\r\n    const ss = String(now.getSeconds()).padStart(2, '0');\r\n\r\n    if (currentTimeEl) currentTimeEl.textContent = hh + ':' + mm + ':' + ss;\r\n\r\n  }\r\n\r\n  updateCurrentTime();\r\n\r\n\r\n\r\n  if (window.__scalingTimer) {\r\n\r\n    clearInterval(window.__scalingTimer);\r\n\r\n    window.__scalingTimer = null;\r\n\r\n  }\r\n\r\n  window.__scalingTimer = setInterval(updateCurrentTime, 1000);\r\n\r\n\r\n\r\n  // ============ 3. RESERVE TIME ============\r\n\r\n  function toLocalDatetimeValue(date) {\r\n\r\n    const yyyy = date.getFullYear();\r\n\r\n    const mm = String(date.getMonth() + 1).padStart(2, '0');\r\n\r\n    const dd = String(date.getDate()).padStart(2, '0');\r\n\r\n    const hh = String(date.getHours()).padStart(2, '0');\r\n\r\n    const mi = String(date.getMinutes()).padStart(2, '0');\r\n\r\n    return yyyy + '-' + mm + '-' + dd + 'T' + hh + ':' + mi;\r\n\r\n  }\r\n\r\n  if (reserveInput && !reserveInput.value) {\r\n\r\n    reserveInput.value = toLocalDatetimeValue(new Date());\r\n\r\n  }\r\n\r\n\r\n\r\n  // ============ 4. DURATION ============\r\n\r\n  const durButtons = root.querySelectorAll('.dur-btn');\r\n\r\n\r\n\r\n  function setActiveDurBtn(value) {\r\n\r\n    durButtons.forEach(function (b) {\r\n\r\n      b.classList.toggle('active', parseInt(b.dataset.min, 10) === value);\r\n\r\n    });\r\n\r\n  }\r\n\r\n\r\n\r\n  durButtons.forEach(function (btn) {\r\n\r\n    const newBtn = btn.cloneNode(true);\r\n\r\n    btn.parentNode.replaceChild(newBtn, btn);\r\n\r\n    newBtn.addEventListener('click', function () {\r\n\r\n      const min = parseInt(newBtn.dataset.min, 10);\r\n\r\n      durationInput.value = min;\r\n\r\n      setActiveDurBtn(min);\r\n\r\n    });\r\n\r\n  });\r\n\r\n\r\n\r\n  root.querySelectorAll('.arrow-btn').forEach(function (btn) {\r\n\r\n    const newBtn = btn.cloneNode(true);\r\n\r\n    btn.parentNode.replaceChild(newBtn, btn);\r\n\r\n    newBtn.addEventListener('click', function () {\r\n\r\n      const delta = parseInt(newBtn.dataset.delta, 10);\r\n\r\n      let v = parseInt(durationInput.value, 10) || 0;\r\n\r\n      v = Math.max(1, Math.min(240, v + delta));\r\n\r\n      durationInput.value = v;\r\n\r\n      setActiveDurBtn(v);\r\n\r\n    });\r\n\r\n  });\r\n\r\n\r\n\r\n  durationInput.addEventListener('input', function () {\r\n\r\n    setActiveDurBtn(parseInt(durationInput.value, 10));\r\n\r\n  });\r\n\r\n  setActiveDurBtn(parseInt(durationInput.value, 10));\r\n\r\n\r\n\r\n  // ============ 5. CAPACITY ============\r\n\r\n  capSlider.addEventListener('input', function () {\r\n\r\n    capValue.textContent = capSlider.value;\r\n\r\n  });\r\n\r\n\r\n\r\n  // ============ ✅ FastAPI 호출 함수 ============\r\n\r\n  // 예약 등록 (Apply 시 즉시 호출)\r\n\r\n  function registerReserveScale(scheduleId, reserveAt, capacity, duration) {\r\n\r\n    return fetch(`${API_BASE}/reserve_scale`, {\r\n\r\n      method: 'POST',\r\n\r\n      headers: { 'Content-Type': 'application/json' },\r\n\r\n      body: JSON.stringify({\r\n\r\n        schedule_id: scheduleId,\r\n\r\n        reserve_at: reserveAt,\r\n\r\n        capacity: capacity,\r\n\r\n        duration: duration,\r\n\r\n        user: 'grafana'\r\n\r\n      })\r\n\r\n    })\r\n\r\n      .then(r => {\r\n\r\n        if (!r.ok) throw new Error('서버 응답 오류: ' + r.status);\r\n\r\n        return r.json();\r\n\r\n      });\r\n\r\n  }\r\n\r\n\r\n\r\n  // 예약 취소 (X 버튼 클릭 시)\r\n\r\n  function cancelReserveScale(scheduleId) {\r\n\r\n    return fetch(`${API_BASE}/reserve_scale/${scheduleId}`, {\r\n\r\n      method: 'DELETE'\r\n\r\n    })\r\n\r\n      .then(r => {\r\n\r\n        if (!r.ok) throw new Error('서버 응답 오류: ' + r.status);\r\n\r\n        return r.json();\r\n\r\n      });\r\n\r\n  }\r\n\r\n\r\n\r\n  // ============ 6. ACTIVE SCHEDULE ============\r\n\r\n  function formatReserveDisplay(dtStr) {\r\n\r\n    if (!dtStr) return '-';\r\n\r\n    const d = new Date(dtStr);\r\n\r\n    if (isNaN(d.getTime())) return dtStr;\r\n\r\n    const yyyy = d.getFullYear();\r\n\r\n    const mm = String(d.getMonth() + 1).padStart(2, '0');\r\n\r\n    const dd = String(d.getDate()).padStart(2, '0');\r\n\r\n    const hh = String(d.getHours()).padStart(2, '0');\r\n\r\n    const mi = String(d.getMinutes()).padStart(2, '0');\r\n\r\n    return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;\r\n\r\n  }\r\n\r\n\r\n\r\n  if (!window.__schedules) window.__schedules = [];\r\n\r\n  const schedules = window.__schedules;\r\n\r\n\r\n\r\n  function renderList() {\r\n\r\n    activeList.innerHTML = '';\r\n\r\n    if (schedules.length === 0) {\r\n\r\n      const empty = document.createElement('div');\r\n\r\n      empty.className = 'empty';\r\n\r\n      empty.textContent = '활성화된 스케일링 없음';\r\n\r\n      activeList.appendChild(empty);\r\n\r\n      return;\r\n\r\n    }\r\n\r\n    schedules.forEach(function (s) {\r\n\r\n      const item = document.createElement('div');\r\n\r\n      item.className = 'item';\r\n\r\n\r\n\r\n      const info = document.createElement('div');\r\n\r\n      info.className = 'item-info';\r\n\r\n\r\n\r\n      const title = document.createElement('div');\r\n\r\n      title.className = 'item-title';\r\n\r\n      title.textContent = '예약시간: ' + formatReserveDisplay(s.reserveAt);\r\n\r\n\r\n\r\n      const sub = document.createElement('div');\r\n\r\n      sub.className = 'sub';\r\n\r\n      sub.textContent = 'Duration: ' + s.duration + '분 · Target Capacity: ' + s.capacity + ' instances';\r\n\r\n\r\n\r\n      info.appendChild(title);\r\n\r\n      info.appendChild(sub);\r\n\r\n\r\n\r\n      const removeBtn = document.createElement('button');\r\n\r\n      removeBtn.className = 'remove-btn';\r\n\r\n      removeBtn.type = 'button';\r\n\r\n      removeBtn.textContent = '✕';\r\n\r\n      removeBtn.addEventListener('click', async function () {\r\n\r\n        // ✅ FastAPI에 취소 요청 전송\r\n\r\n        try {\r\n\r\n          await cancelReserveScale(s.id);\r\n\r\n          console.log('✅ 예약 취소 완료:', s.id);\r\n\r\n        } catch (err) {\r\n\r\n          console.error('❌ 예약 취소 실패:', err);\r\n\r\n          // 취소 실패해도 일단 목록에서는 제거 (이미 실행됐을 수 있음)\r\n\r\n        }\r\n\r\n\r\n\r\n        const idx = schedules.findIndex(function (x) { return x.id === s.id; });\r\n\r\n        if (idx > -1) {\r\n\r\n          schedules.splice(idx, 1);\r\n\r\n          renderList();\r\n\r\n        }\r\n\r\n      });\r\n\r\n\r\n\r\n      item.appendChild(info);\r\n\r\n      item.appendChild(removeBtn);\r\n\r\n      activeList.appendChild(item);\r\n\r\n    });\r\n\r\n  }\r\n\r\n\r\n\r\n  // ============ 7. Apply (cloneNode로 기존 핸들러 완전 제거) ============\r\n\r\n  const newApplyBtn = applyBtn.cloneNode(true);\r\n\r\n  applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);\r\n\r\n\r\n\r\n  let isProcessing = false;\r\n\r\n\r\n\r\n  newApplyBtn.addEventListener('click', async function (e) {\r\n\r\n    e.preventDefault();\r\n\r\n    e.stopPropagation();\r\n\r\n\r\n\r\n    if (isProcessing) return;\r\n\r\n\r\n\r\n    const now = Date.now();\r\n\r\n    if (window.__lastApplyTime && now - window.__lastApplyTime < 300) {\r\n\r\n      return;\r\n\r\n    }\r\n\r\n    window.__lastApplyTime = now;\r\n\r\n\r\n\r\n    isProcessing = true;\r\n\r\n    newApplyBtn.disabled = true;\r\n\r\n\r\n\r\n    try {\r\n\r\n      const reserveAt = reserveInput.value;\r\n\r\n      const duration = parseInt(durationInput.value, 10);\r\n\r\n      const capacity = parseInt(capSlider.value, 10);\r\n\r\n\r\n\r\n      if (!reserveAt) {\r\n\r\n        alert('예약 시간을 선택해주세요.');\r\n\r\n        return;\r\n\r\n      }\r\n\r\n      if (!duration || duration < 1) {\r\n\r\n        alert('Duration을 올바르게 입력해주세요.');\r\n\r\n        return;\r\n\r\n      }\r\n\r\n      if (new Date(reserveAt).getTime() <= Date.now()) {\r\n\r\n        alert('예약 시간은 현재 시간 이후여야 합니다.');\r\n\r\n        return;\r\n\r\n      }\r\n\r\n\r\n\r\n      const newSchedule = {\r\n\r\n        id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),\r\n\r\n        reserveAt: reserveAt,\r\n\r\n        duration: duration,\r\n\r\n        capacity: capacity\r\n\r\n      };\r\n\r\n\r\n\r\n      // ✅ FastAPI에 예약 등록 요청\r\n\r\n      try {\r\n\r\n        await registerReserveScale(\r\n\r\n          newSchedule.id,\r\n\r\n          newSchedule.reserveAt,\r\n\r\n          newSchedule.capacity,\r\n\r\n          newSchedule.duration\r\n\r\n        );\r\n\r\n        console.log('✅ 예약 등록 완료:', newSchedule.id);\r\n\r\n      } catch (err) {\r\n\r\n        console.error('❌ 예약 등록 실패:', err);\r\n\r\n        alert('예약 등록에 실패했습니다: ' + err.message);\r\n\r\n        return;\r\n\r\n      }\r\n\r\n\r\n\r\n      schedules.push(newSchedule);\r\n\r\n      renderList();\r\n\r\n    } finally {\r\n\r\n      setTimeout(function () {\r\n\r\n        isProcessing = false;\r\n\r\n        newApplyBtn.disabled = false;\r\n\r\n      }, 300);\r\n\r\n    }\r\n\r\n  });\r\n\r\n\r\n\r\n  // ============ ✅ 8. 서버에서 예약 목록 동기화 ============\r\n  async function loadSchedulesFromServer() {\r\n    try {\r\n      const res = await fetch(`${API_BASE}/reserve_scale`);\r\n      if (!res.ok) throw new Error('서버 응답 오류: ' + res.status);\r\n      const data = await res.json();\r\n\r\n      schedules.length = 0;\r\n      (data.schedules || []).forEach(s => {\r\n        schedules.push({\r\n          id: s.schedule_id,\r\n          reserveAt: s.reserve_at,\r\n          capacity: s.capacity,\r\n          duration: s.duration\r\n        });\r\n      });\r\n\r\n      renderList();\r\n      console.log(`✅ 서버에서 예약 ${schedules.length}개 불러옴`);\r\n    } catch (err) {\r\n      console.error('❌ 예약 목록 불러오기 실패:', err);\r\n      renderList();\r\n    }\r\n  }\r\n\r\n  loadSchedulesFromServer();   // ← renderList() 대신 이거 호출\r\n\r\n})();",
-        "content": "```json\n{{{json @root}}}\n```",
-        "contentPartials": [],
-        "defaultContent": "<div id=\"scaling-duration-controller\" class=\"scaling-card\">\r\n  <div class=\"header\">\r\n    <span class=\"bar\"></span>\r\n    <h2>SCHEDULED SCALING — DURATION CONTROL</h2>\r\n  </div>\r\n\r\n  <!-- 1. CURRENT TIME -->\r\n  <div class=\"section\">\r\n    <label>CURRENT TIME (KST)</label>\r\n    <div class=\"display-box\" id=\"currentTime\">--:--:--</div>\r\n  </div>\r\n\r\n  <!-- 2. RESERVE TIME (START DELAY → 변경) -->\r\n  <div class=\"section\">\r\n    <label>RESERVE TIME</label>\r\n    <div class=\"reserve-input-wrap\">\r\n      <input type=\"datetime-local\" id=\"reserve-input\" />\r\n    </div>\r\n  </div>\r\n\r\n  <!-- DURATION -->\r\n  <div class=\"section\">\r\n    <label>DURATION (MINUTES)</label>\r\n    <div class=\"duration-buttons\">\r\n      <button class=\"dur-btn\" data-min=\"5\" type=\"button\">5분</button>\r\n      <button class=\"dur-btn\" data-min=\"10\" type=\"button\">10분</button>\r\n      <button class=\"dur-btn\" data-min=\"30\" type=\"button\">30분</button>\r\n      <button class=\"dur-btn\" data-min=\"60\" type=\"button\">60분</button>\r\n      <button class=\"dur-btn\" data-min=\"120\" type=\"button\">120분</button>\r\n    </div>\r\n    <div class=\"custom-input-wrap\">\r\n      <button class=\"arrow-btn\" data-delta=\"-1\" type=\"button\">−</button>\r\n      <input type=\"number\" id=\"duration-input\" value=\"10\" min=\"1\" max=\"240\" />\r\n      <span class=\"unit\">분</span>\r\n      <button class=\"arrow-btn\" data-delta=\"1\" type=\"button\">+</button>\r\n    </div>\r\n  </div>\r\n\r\n  <!-- 3. TARGET CAPACITY (간격 조정) -->\r\n  <div class=\"section\">\r\n    <div class=\"cap-label-row\">\r\n      <label class=\"inline-label\">TARGET CAPACITY</label>\r\n      <span class=\"cap-info\">\r\n        <span id=\"capValue\" class=\"cap-num\">4</span>\r\n        <span class=\"cap-unit\">instances</span>\r\n      </span>\r\n    </div>\r\n    <input type=\"range\" id=\"capacity-slider\" min=\"1\" max=\"8\" value=\"4\" />\r\n    <div class=\"ticks\">\r\n      <span>1</span><span>2</span><span>3</span><span>4</span>\r\n      <span>5</span><span>6</span><span>7</span><span>8</span>\r\n    </div>\r\n  </div>\r\n\r\n  <button class=\"apply-btn\" id=\"apply-btn\" type=\"button\">\r\n    Apply Scaling Schedule\r\n  </button>\r\n\r\n  <!-- 4. ACTIVE SCHEDULE -->\r\n  <div class=\"active-section\">\r\n    <div class=\"active-label\">ACTIVE SCHEDULE</div>\r\n    <div id=\"activeList\" class=\"active-list\">\r\n      <div class=\"empty\">활성화된 스케일링 없음</div>\r\n    </div>\r\n  </div>\r\n</div>\r\n\r\n<style>\r\n#scaling-duration-controller {\r\n  background: linear-gradient(180deg, #0f1419 0%, #0a0d12 100%);\r\n  border: 1px solid #1f2937;\r\n  border-radius: 12px;\r\n  padding: 24px;\r\n  color: #e5e7eb;\r\n  font-family: 'Inter', -apple-system, sans-serif;\r\n  box-sizing: border-box;\r\n}\r\n#scaling-duration-controller *,\r\n#scaling-duration-controller *::before,\r\n#scaling-duration-controller *::after { box-sizing: border-box; }\r\n\r\n#scaling-duration-controller .header {\r\n  display: flex; align-items: center; gap: 10px; margin-bottom: 24px;\r\n}\r\n#scaling-duration-controller .header .bar {\r\n  width: 4px; height: 20px; background: #a855f7; border-radius: 2px;\r\n}\r\n#scaling-duration-controller .header h2 {\r\n  font-size: 14px; letter-spacing: 1.5px; margin: 0; color: #fff;\r\n}\r\n\r\n#scaling-duration-controller .section { margin-bottom: 20px; }\r\n#scaling-duration-controller .section label {\r\n  display: block; font-size: 12px; color: #9ca3af;\r\n  letter-spacing: 1px; margin-bottom: 8px;\r\n}\r\n\r\n#scaling-duration-controller .display-box {\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 12px 16px;\r\n  font-family: 'JetBrains Mono', monospace;\r\n  color: #60a5fa; font-size: 16px;\r\n}\r\n\r\n/* ===== RESERVE TIME ===== */\r\n#scaling-duration-controller .reserve-input-wrap {\r\n  display: flex; align-items: center; gap: 8px;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 6px 12px;\r\n}\r\n#scaling-duration-controller #reserve-input {\r\n  flex: 1;\r\n  background: transparent;\r\n  border: none;\r\n  color: #60a5fa;\r\n  font-size: 15px;\r\n  font-family: 'JetBrains Mono', monospace;\r\n  outline: none;\r\n  padding: 8px 4px;\r\n  cursor: pointer;\r\n  color-scheme: dark;\r\n}\r\n#scaling-duration-controller #reserve-input::-webkit-calendar-picker-indicator {\r\n  filter: invert(60%) sepia(80%) saturate(500%) hue-rotate(240deg);\r\n  cursor: pointer;\r\n  opacity: 0.9;\r\n}\r\n\r\n/* ===== DURATION ===== */\r\n#scaling-duration-controller .duration-buttons {\r\n  display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;\r\n}\r\n#scaling-duration-controller .dur-btn {\r\n  flex: 1; min-width: 60px; padding: 10px;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 6px; color: #e5e7eb;\r\n  cursor: pointer; transition: all 0.2s; font-size: 13px;\r\n}\r\n#scaling-duration-controller .dur-btn:hover { background: #1f2937; }\r\n#scaling-duration-controller .dur-btn.active {\r\n  background: #7c3aed; border-color: #a855f7; color: #fff;\r\n}\r\n\r\n#scaling-duration-controller .custom-input-wrap {\r\n  display: flex; align-items: center; gap: 8px;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 6px;\r\n}\r\n#scaling-duration-controller .arrow-btn {\r\n  width: 32px; height: 32px;\r\n  background: #1f2937; border: none; border-radius: 6px;\r\n  color: #a855f7; font-size: 18px; cursor: pointer;\r\n  font-weight: bold; flex-shrink: 0;\r\n}\r\n#scaling-duration-controller .arrow-btn:hover { background: #374151; }\r\n#scaling-duration-controller #duration-input {\r\n  flex: 1; background: transparent; border: none;\r\n  color: #e5e7eb; font-size: 16px; text-align: center;\r\n  outline: none; font-family: 'JetBrains Mono', monospace;\r\n  min-width: 0;\r\n}\r\n#scaling-duration-controller #duration-input::-webkit-inner-spin-button,\r\n#scaling-duration-controller #duration-input::-webkit-outer-spin-button {\r\n  -webkit-appearance: none; margin: 0;\r\n}\r\n#scaling-duration-controller .unit {\r\n  color: #6b7280; font-size: 13px; padding-right: 4px;\r\n}\r\n\r\n/* ===== TARGET CAPACITY ===== */\r\n#scaling-duration-controller .cap-label-row {\r\n  display: flex;\r\n  justify-content: space-between;\r\n  align-items: center;\r\n  gap: 16px;                /* ✅ 라벨 ↔ 숫자영역 최소 간격 보장 */\r\n  margin-bottom: 8px;\r\n}\r\n#scaling-duration-controller .inline-label {\r\n  font-size: 12px;\r\n  color: #9ca3af;\r\n  letter-spacing: 1px;\r\n  margin: 0;\r\n  white-space: nowrap;      /* ✅ 라벨 줄바꿈 방지 */\r\n}\r\n#scaling-duration-controller .cap-info {\r\n  display: inline-flex;\r\n  align-items: baseline;\r\n  gap: 8px;                 /* 숫자 ↔ instances 간격 */\r\n  font-size: 13px;\r\n  color: #9ca3af;\r\n  white-space: nowrap;      /* ✅ 줄바꿈 방지 */\r\n  margin-left: auto;        /* ✅ 무조건 오른쪽으로 밀기 */\r\n}\r\n#scaling-duration-controller .cap-num {\r\n  color: #a855f7;\r\n  font-weight: bold;\r\n  font-size: 16px;\r\n  margin-left: 4px;         /* ✅ 추가 여백 (선택) */\r\n}\r\n#scaling-duration-controller .cap-unit {\r\n  color: #9ca3af;\r\n}\r\n\r\n#scaling-duration-controller #capacity-slider {\r\n  width: 100%; -webkit-appearance: none; appearance: none;\r\n  height: 4px; border-radius: 2px; outline: none;\r\n  background: #1f2937;\r\n}\r\n#scaling-duration-controller #capacity-slider::-webkit-slider-thumb {\r\n  -webkit-appearance: none; appearance: none;\r\n  width: 18px; height: 18px;\r\n  background: #a855f7; border-radius: 50%; cursor: pointer;\r\n  box-shadow: 0 0 10px rgba(168,85,247,0.6);\r\n}\r\n#scaling-duration-controller #capacity-slider::-moz-range-thumb {\r\n  width: 18px; height: 18px; border: none;\r\n  background: #a855f7; border-radius: 50%; cursor: pointer;\r\n  box-shadow: 0 0 10px rgba(168,85,247,0.6);\r\n}\r\n#scaling-duration-controller .ticks {\r\n  display: flex; justify-content: space-between;\r\n  color: #4b5563; font-size: 11px; margin-top: 6px;\r\n}\r\n\r\n/* ===== APPLY BUTTON ===== */\r\n#scaling-duration-controller .apply-btn {\r\n  width: 100%; padding: 14px; border: none; border-radius: 8px;\r\n  color: #fff; font-size: 14px; font-weight: 600;\r\n  cursor: pointer; margin-top: 8px;\r\n  background: linear-gradient(90deg, #7c3aed, #a855f7);\r\n  transition: all 0.2s;\r\n}\r\n#scaling-duration-controller .apply-btn:hover {\r\n  box-shadow: 0 0 20px rgba(168,85,247,0.4);\r\n}\r\n\r\n/* ===== ACTIVE SCHEDULE ===== */\r\n#scaling-duration-controller .active-section { margin-top: 24px; }\r\n#scaling-duration-controller .active-label {\r\n  font-size: 11px; color: #6b7280;\r\n  letter-spacing: 1.5px; margin-bottom: 10px;\r\n}\r\n#scaling-duration-controller .active-list .item {\r\n  display: flex; align-items: center; justify-content: space-between;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;\r\n  font-size: 13px;\r\n}\r\n#scaling-duration-controller .active-list .item .item-info {\r\n  display: flex; flex-direction: column; gap: 4px;\r\n}\r\n#scaling-duration-controller .active-list .item .item-title {\r\n  color: #e5e7eb; font-weight: 600;\r\n}\r\n#scaling-duration-controller .active-list .item .sub {\r\n  color: #6b7280; font-size: 11px;\r\n  font-family: 'JetBrains Mono', monospace;\r\n}\r\n#scaling-duration-controller .active-list .item .remove-btn {\r\n  background: transparent; border: 1px solid #1f2937;\r\n  color: #ef4444; font-size: 14px; cursor: pointer;\r\n  width: 28px; height: 28px; border-radius: 6px;\r\n  display: flex; align-items: center; justify-content: center;\r\n  transition: all 0.2s; flex-shrink: 0;\r\n}\r\n#scaling-duration-controller .active-list .item .remove-btn:hover {\r\n  background: #ef4444; color: #fff; border-color: #ef4444;\r\n}\r\n#scaling-duration-controller .active-list .empty {\r\n  color: #4b5563; font-size: 13px;\r\n  text-align: center; padding: 16px;\r\n}\r\n</style>",
-        "editor": {
-          "format": "auto",
-          "language": "markdown"
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "editors": [
-          "afterRender"
-        ],
-        "externalStyles": [],
-        "helpers": "",
-        "renderMode": "everyRow",
-        "styles": "",
-        "wrap": true
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
       },
-      "pluginVersion": "6.2.3",
+      "pluginVersion": "11.6.15",
       "targets": [
         {
+          "editorMode": "code",
+          "expr": "present_average_cpu",
+          "legendFormat": "현재 CPU",
+          "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "future_average_cpu",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "예측 CPU",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "present_average_memory",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "현재 MEMROY",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "future_average_memory",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "예측 MEMORY",
+          "range": true,
+          "refId": "D"
         }
       ],
       "title": "Panel Title",
-      "type": "marcusolsson-dynamictext-panel"
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -124,13 +199,13 @@
       },
       "gridPos": {
         "h": 10,
-        "w": 9,
-        "x": 15,
+        "w": 3,
+        "x": 12,
         "y": 0
       },
       "id": 344,
       "options": {
-        "afterRender": "const root = context.element.querySelector('#ec2-controller');\r\nif (!root) return;\r\n\r\nconst input = root.querySelector('#ec2-count');\r\n\r\nfunction clamp(v) {\r\n  v = parseInt(v);\r\n  if (isNaN(v) || v < 0) v = 0;\r\n  if (v > 8) v = 8;\r\n  return v;\r\n}\r\nfunction changeCount(delta) {\r\n  const v = parseInt(input.value) || 0;\r\n  input.value = clamp(v + delta);\r\n}\r\n\r\ninput.addEventListener('input', () => {\r\n  input.value = input.value.replace(/[^0-9]/g, '');\r\n  if (input.value !== '' && parseInt(input.value) > 8) input.value = 8;\r\n});\r\ninput.addEventListener('blur', () => { input.value = clamp(input.value); });\r\ninput.addEventListener('keydown', (e) => {\r\n  if (e.key === 'Enter')     { e.target.blur(); }\r\n  if (e.key === 'ArrowUp')   { e.preventDefault(); changeCount(1); }\r\n  if (e.key === 'ArrowDown') { e.preventDefault(); changeCount(-1); }\r\n});\r\n\r\nroot.querySelectorAll('.arrow-btn').forEach(btn => {\r\n  btn.addEventListener('click', () => {\r\n    changeCount(parseInt(btn.dataset.delta));\r\n  });\r\n});\r\n\r\n// ✅ action에 따라 엔드포인트 분기\r\nfunction callApi(action) {\r\n  input.value = clamp(input.value);\r\n  const count = parseInt(input.value) || 0;\r\n  if (count === 0) {\r\n    alert('EC2 수를 1 이상으로 입력하세요');\r\n    return;\r\n  }\r\n\r\n  // action: \"scale-out\" → /api/scale-out\r\n  // action: \"scale-in\"  → /api/scale-in\r\n  const endpoint = action; // \"scale-out\" or \"scale-in\"\r\n\r\n  fetch(`http://172.19.59.142:8001/api/${endpoint}`, {\r\n    method: 'POST',\r\n    headers: {'Content-Type': 'application/json'},\r\n    body: JSON.stringify({\r\n      action: action,\r\n      delta: count,\r\n      user: 'grafana'\r\n    })\r\n  })\r\n  .then(r => {\r\n    if (!r.ok) throw new Error(`HTTP ${r.status}`);\r\n    return r.json();\r\n  })\r\n  .then(d => {\r\n    const label = action === 'scale-out' ? '🟢 Scale-Out' : '🔴 Scale-In';\r\n    alert(`✅ ${label}: ${count}대 요청 완료\\n${d.message || ''}`);\r\n  })\r\n  .catch(e => alert(`❌ ${e.message}`));\r\n}\r\n\r\nfunction callRollback() {\r\n  if (!confirm('정말 롤백하시겠습니까?')) return;\r\n  fetch('http://172.19.59.142:8001/api/rollback', {\r\n    method: 'POST',\r\n    headers: {'Content-Type': 'application/json'},\r\n    body: JSON.stringify({action: 'rollback', user: 'grafana'})\r\n  })\r\n  .then(r => r.json())\r\n  .then(d => alert('🔄 Rollback 실행됨'))\r\n  .catch(e => alert(`❌ ${e.message}`));\r\n}\r\n\r\nroot.querySelectorAll('.action-btn').forEach(btn => {\r\n  btn.addEventListener('click', () => {\r\n    const action = btn.dataset.action;\r\n    if (action === 'rollback') callRollback();\r\n    else callApi(action);   // 'scale-out' 또는 'scale-in'\r\n  });\r\n});",
+        "afterRender": "const root = context.element.querySelector('#ec2-controller');\r\nif (!root) return;\r\n\r\nconst input = root.querySelector('#ec2-count');\r\n\r\nfunction clamp(v) {\r\n  v = parseInt(v);\r\n  if (isNaN(v) || v < 0) v = 0;\r\n  if (v > 8) v = 8;\r\n  return v;\r\n}\r\nfunction changeCount(delta) {\r\n  const v = parseInt(input.value) || 0;\r\n  input.value = clamp(v + delta);\r\n}\r\n\r\ninput.addEventListener('input', () => {\r\n  input.value = input.value.replace(/[^0-9]/g, '');\r\n  if (input.value !== '' && parseInt(input.value) > 8) input.value = 8;\r\n});\r\ninput.addEventListener('blur', () => { input.value = clamp(input.value); });\r\ninput.addEventListener('keydown', (e) => {\r\n  if (e.key === 'Enter')     { e.target.blur(); }\r\n  if (e.key === 'ArrowUp')   { e.preventDefault(); changeCount(1); }\r\n  if (e.key === 'ArrowDown') { e.preventDefault(); changeCount(-1); }\r\n});\r\n\r\nroot.querySelectorAll('.arrow-btn').forEach(btn => {\r\n  btn.addEventListener('click', () => {\r\n    changeCount(parseInt(btn.dataset.delta));\r\n  });\r\n});\r\n\r\n// ✅ action에 따라 엔드포인트 분기\r\nfunction callApi(action) {\r\n  input.value = clamp(input.value);\r\n  const count = parseInt(input.value) || 0;\r\n  if (count === 0) {\r\n    alert('EC2 수를 1 이상으로 입력하세요');\r\n    return;\r\n  }\r\n\r\n  // action: \"scale-out\" → /api/scale-out\r\n  // action: \"scale-in\"  → /api/scale-in\r\n  const endpoint = action; // \"scale-out\" or \"scale-in\"\r\n\r\n  fetch(`localhost:8001/api/${endpoint}`, {\r\n    method: 'POST',\r\n    headers: {'Content-Type': 'application/json'},\r\n    body: JSON.stringify({\r\n      action: action,\r\n      delta: count,\r\n      user: 'grafana'\r\n    })\r\n  })\r\n  .then(r => {\r\n    if (!r.ok) throw new Error(`HTTP ${r.status}`);\r\n    return r.json();\r\n  })\r\n  .then(d => {\r\n    const label = action === 'scale-out' ? '🟢 Scale-Out' : '🔴 Scale-In';\r\n    alert(`✅ ${label}: ${count}대 요청 완료\\n${d.message || ''}`);\r\n  })\r\n  .catch(e => alert(`❌ ${e.message}`));\r\n}\r\n\r\nfunction callRollback() {\r\n  if (!confirm('정말 롤백하시겠습니까?')) return;\r\n  fetch('localhost:8001/api/rollback', {\r\n    method: 'POST',\r\n    headers: {'Content-Type': 'application/json'},\r\n    body: JSON.stringify({action: 'rollback', user: 'grafana'})\r\n  })\r\n  .then(r => r.json())\r\n  .then(d => alert('🔄 Rollback 실행됨'))\r\n  .catch(e => alert(`❌ ${e.message}`));\r\n}\r\n\r\nroot.querySelectorAll('.action-btn').forEach(btn => {\r\n  btn.addEventListener('click', () => {\r\n    const action = btn.dataset.action;\r\n    if (action === 'rollback') callRollback();\r\n    else callApi(action);   // 'scale-out' 또는 'scale-in'\r\n  });\r\n});",
         "content": "<div class=\"controller\" id=\"ec2-controller\">\n  <input type=\"number\" id=\"ec2-count\" class=\"input-box\" value=\"0\" min=\"0\" max=\"8\" />\n  <button class=\"action-btn btn-out\" data-action=\"scale-out\">+ Scale-Out</button>\n  <button class=\"action-btn btn-in\" data-action=\"scale-in\">− Scale-In</button>\n  <button class=\"action-btn btn-rollback\" data-action=\"rollback\">⚠ Rollback</button>\n  <button class=\"arrow-btn arrow-up\" data-delta=\"1\">\n    <svg viewBox=\"0 0 24 80\" preserveAspectRatio=\"none\">\n      <polyline points=\"6,30 12,6 18,30\" />\n      <line x1=\"12\" y1=\"6\" x2=\"12\" y2=\"74\" />\n    </svg>\n  </button>\n  <button class=\"arrow-btn arrow-down\" data-delta=\"-1\">\n    <svg viewBox=\"0 0 24 80\" preserveAspectRatio=\"none\">\n      <line x1=\"12\" y1=\"6\" x2=\"12\" y2=\"74\" />\n      <polyline points=\"6,50 12,74 18,50\" />\n    </svg>\n  </button>\n</div>",
         "contentPartials": [],
         "defaultContent": "<div class=\"controller\" id=\"ec2-controller\">\r\n  <input type=\"number\" id=\"ec2-count\" class=\"input-box\" value=\"0\" min=\"0\" max=\"8\" />\r\n  <button class=\"action-btn btn-out\" data-action=\"scale-out\">+ Scale-Out</button>\r\n  <button class=\"action-btn btn-in\" data-action=\"scale-in\">− Scale-In</button>\r\n  <button class=\"action-btn btn-rollback\" data-action=\"rollback\">⚠ Rollback</button>\r\n  <button class=\"arrow-btn arrow-up\" data-delta=\"1\">\r\n    <svg viewBox=\"0 0 24 80\" preserveAspectRatio=\"none\">\r\n      <polyline points=\"6,30 12,6 18,30\" />\r\n      <line x1=\"12\" y1=\"6\" x2=\"12\" y2=\"74\" />\r\n    </svg>\r\n  </button>\r\n  <button class=\"arrow-btn arrow-down\" data-delta=\"-1\">\r\n    <svg viewBox=\"0 0 24 80\" preserveAspectRatio=\"none\">\r\n      <line x1=\"12\" y1=\"6\" x2=\"12\" y2=\"74\" />\r\n      <polyline points=\"6,50 12,74 18,50\" />\r\n    </svg>\r\n  </button>\r\n</div>",
@@ -159,367 +234,12 @@
       "type": "marcusolsson-dynamictext-panel"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 10
-      },
-      "id": 342,
-      "panels": [],
-      "title": "Control Tower",
-      "type": "row"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "#EAB839",
-                "value": 50
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 6,
-        "x": 0,
-        "y": 11
-      },
-      "id": 345,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.15",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "avg(100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
-          "interval": "",
-          "legendFormat": "AVG CPU",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "AVG Cpu Uses",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "max": 100,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "#EAB839",
-                "value": 59.9995
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 6,
-        "x": 6,
-        "y": 11
-      },
-      "id": 346,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.15",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)",
-          "legendFormat": "AVG MEMORY",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "AVG Memory Uses",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "binbps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 6,
-        "x": 12,
-        "y": 11
-      },
-      "id": 347,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.15",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "avg(rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])) * 8",
-          "legendFormat": "서버가 받은 트래픽(다운로드)",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "expr": "avg(rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])) * 8",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "서버가 보낸 트래픽(업로드)",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "AVG Network Traffic Uses",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "decimals": 0,
-          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -536,37 +256,38 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 6,
-        "x": 18,
-        "y": 11
+        "h": 12,
+        "w": 15,
+        "x": 0,
+        "y": 10
       },
-      "id": 343,
+      "id": 348,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "afterRender": "(function initScalingController() {\r\n\r\n  // ============ 0. 중복 root 완전 제거 ============\r\n\r\n  const allRoots = document.querySelectorAll('#scaling-duration-controller');\r\n\r\n  if (allRoots.length === 0) return;\r\n\r\n\r\n\r\n  for (let i = 0; i < allRoots.length - 1; i++) {\r\n\r\n    allRoots[i].remove();\r\n\r\n  }\r\n\r\n  const root = document.querySelector('#scaling-duration-controller');\r\n\r\n  if (!root) return;\r\n\r\n\r\n\r\n  // ============ 0-1. 중복 초기화 방지 ============\r\n\r\n  if (root.dataset.initialized === 'true') return;\r\n\r\n  root.dataset.initialized = 'true';\r\n\r\n\r\n\r\n  // ============ ✅ FastAPI 설정 ============\r\n\r\n  const API_BASE = 'localhost:8001/api';\r\n\r\n\r\n\r\n  // ============ 1. 요소 가져오기 ============\r\n\r\n  const currentTimeEl = root.querySelector('#currentTime');\r\n\r\n  const reserveInput = root.querySelector('#reserve-input');\r\n\r\n  const durationInput = root.querySelector('#duration-input');\r\n\r\n  const capSlider = root.querySelector('#capacity-slider');\r\n\r\n  const capValue = root.querySelector('#capValue');\r\n\r\n  const applyBtn = root.querySelector('#apply-btn');\r\n\r\n  const activeList = root.querySelector('#activeList');\r\n\r\n\r\n\r\n  if (!applyBtn || !durationInput || !capSlider || !activeList) return;\r\n\r\n\r\n\r\n  // ============ 2. CURRENT TIME ============\r\n\r\n  function updateCurrentTime() {\r\n\r\n    const now = new Date();\r\n\r\n    const hh = String(now.getHours()).padStart(2, '0');\r\n\r\n    const mm = String(now.getMinutes()).padStart(2, '0');\r\n\r\n    const ss = String(now.getSeconds()).padStart(2, '0');\r\n\r\n    if (currentTimeEl) currentTimeEl.textContent = hh + ':' + mm + ':' + ss;\r\n\r\n  }\r\n\r\n  updateCurrentTime();\r\n\r\n\r\n\r\n  if (window.__scalingTimer) {\r\n\r\n    clearInterval(window.__scalingTimer);\r\n\r\n    window.__scalingTimer = null;\r\n\r\n  }\r\n\r\n  window.__scalingTimer = setInterval(updateCurrentTime, 1000);\r\n\r\n\r\n\r\n  // ============ 3. RESERVE TIME ============\r\n\r\n  function toLocalDatetimeValue(date) {\r\n\r\n    const yyyy = date.getFullYear();\r\n\r\n    const mm = String(date.getMonth() + 1).padStart(2, '0');\r\n\r\n    const dd = String(date.getDate()).padStart(2, '0');\r\n\r\n    const hh = String(date.getHours()).padStart(2, '0');\r\n\r\n    const mi = String(date.getMinutes()).padStart(2, '0');\r\n\r\n    return yyyy + '-' + mm + '-' + dd + 'T' + hh + ':' + mi;\r\n\r\n  }\r\n\r\n  if (reserveInput && !reserveInput.value) {\r\n\r\n    reserveInput.value = toLocalDatetimeValue(new Date());\r\n\r\n  }\r\n\r\n\r\n\r\n  // ============ 4. DURATION ============\r\n\r\n  const durButtons = root.querySelectorAll('.dur-btn');\r\n\r\n\r\n\r\n  function setActiveDurBtn(value) {\r\n\r\n    durButtons.forEach(function (b) {\r\n\r\n      b.classList.toggle('active', parseInt(b.dataset.min, 10) === value);\r\n\r\n    });\r\n\r\n  }\r\n\r\n\r\n\r\n  durButtons.forEach(function (btn) {\r\n\r\n    const newBtn = btn.cloneNode(true);\r\n\r\n    btn.parentNode.replaceChild(newBtn, btn);\r\n\r\n    newBtn.addEventListener('click', function () {\r\n\r\n      const min = parseInt(newBtn.dataset.min, 10);\r\n\r\n      durationInput.value = min;\r\n\r\n      setActiveDurBtn(min);\r\n\r\n    });\r\n\r\n  });\r\n\r\n\r\n\r\n  root.querySelectorAll('.arrow-btn').forEach(function (btn) {\r\n\r\n    const newBtn = btn.cloneNode(true);\r\n\r\n    btn.parentNode.replaceChild(newBtn, btn);\r\n\r\n    newBtn.addEventListener('click', function () {\r\n\r\n      const delta = parseInt(newBtn.dataset.delta, 10);\r\n\r\n      let v = parseInt(durationInput.value, 10) || 0;\r\n\r\n      v = Math.max(1, Math.min(240, v + delta));\r\n\r\n      durationInput.value = v;\r\n\r\n      setActiveDurBtn(v);\r\n\r\n    });\r\n\r\n  });\r\n\r\n\r\n\r\n  durationInput.addEventListener('input', function () {\r\n\r\n    setActiveDurBtn(parseInt(durationInput.value, 10));\r\n\r\n  });\r\n\r\n  setActiveDurBtn(parseInt(durationInput.value, 10));\r\n\r\n\r\n\r\n  // ============ 5. CAPACITY ============\r\n\r\n  capSlider.addEventListener('input', function () {\r\n\r\n    capValue.textContent = capSlider.value;\r\n\r\n  });\r\n\r\n\r\n\r\n  // ============ ✅ FastAPI 호출 함수 ============\r\n\r\n  // 예약 등록 (Apply 시 즉시 호출)\r\n\r\n  function registerReserveScale(scheduleId, reserveAt, capacity, duration) {\r\n\r\n    return fetch(`${API_BASE}/reserve_scale`, {\r\n\r\n      method: 'POST',\r\n\r\n      headers: { 'Content-Type': 'application/json' },\r\n\r\n      body: JSON.stringify({\r\n\r\n        schedule_id: scheduleId,\r\n\r\n        reserve_at: reserveAt,\r\n\r\n        capacity: capacity,\r\n\r\n        duration: duration,\r\n\r\n        user: 'grafana'\r\n\r\n      })\r\n\r\n    })\r\n\r\n      .then(r => {\r\n\r\n        if (!r.ok) throw new Error('서버 응답 오류: ' + r.status);\r\n\r\n        return r.json();\r\n\r\n      });\r\n\r\n  }\r\n\r\n\r\n\r\n  // 예약 취소 (X 버튼 클릭 시)\r\n\r\n  function cancelReserveScale(scheduleId) {\r\n\r\n    return fetch(`${API_BASE}/reserve_scale/${scheduleId}`, {\r\n\r\n      method: 'DELETE'\r\n\r\n    })\r\n\r\n      .then(r => {\r\n\r\n        if (!r.ok) throw new Error('서버 응답 오류: ' + r.status);\r\n\r\n        return r.json();\r\n\r\n      });\r\n\r\n  }\r\n\r\n\r\n\r\n  // ============ 6. ACTIVE SCHEDULE ============\r\n\r\n  function formatReserveDisplay(dtStr) {\r\n\r\n    if (!dtStr) return '-';\r\n\r\n    const d = new Date(dtStr);\r\n\r\n    if (isNaN(d.getTime())) return dtStr;\r\n\r\n    const yyyy = d.getFullYear();\r\n\r\n    const mm = String(d.getMonth() + 1).padStart(2, '0');\r\n\r\n    const dd = String(d.getDate()).padStart(2, '0');\r\n\r\n    const hh = String(d.getHours()).padStart(2, '0');\r\n\r\n    const mi = String(d.getMinutes()).padStart(2, '0');\r\n\r\n    return yyyy + '-' + mm + '-' + dd + ' ' + hh + ':' + mi;\r\n\r\n  }\r\n\r\n\r\n\r\n  if (!window.__schedules) window.__schedules = [];\r\n\r\n  const schedules = window.__schedules;\r\n\r\n\r\n\r\n  function renderList() {\r\n\r\n    activeList.innerHTML = '';\r\n\r\n    if (schedules.length === 0) {\r\n\r\n      const empty = document.createElement('div');\r\n\r\n      empty.className = 'empty';\r\n\r\n      empty.textContent = '활성화된 스케일링 없음';\r\n\r\n      activeList.appendChild(empty);\r\n\r\n      return;\r\n\r\n    }\r\n\r\n    schedules.forEach(function (s) {\r\n\r\n      const item = document.createElement('div');\r\n\r\n      item.className = 'item';\r\n\r\n\r\n\r\n      const info = document.createElement('div');\r\n\r\n      info.className = 'item-info';\r\n\r\n\r\n\r\n      const title = document.createElement('div');\r\n\r\n      title.className = 'item-title';\r\n\r\n      title.textContent = '예약시간: ' + formatReserveDisplay(s.reserveAt);\r\n\r\n\r\n\r\n      const sub = document.createElement('div');\r\n\r\n      sub.className = 'sub';\r\n\r\n      sub.textContent = 'Duration: ' + s.duration + '분 · Target Capacity: ' + s.capacity + ' instances';\r\n\r\n\r\n\r\n      info.appendChild(title);\r\n\r\n      info.appendChild(sub);\r\n\r\n\r\n\r\n      const removeBtn = document.createElement('button');\r\n\r\n      removeBtn.className = 'remove-btn';\r\n\r\n      removeBtn.type = 'button';\r\n\r\n      removeBtn.textContent = '✕';\r\n\r\n      removeBtn.addEventListener('click', async function () {\r\n\r\n        // ✅ FastAPI에 취소 요청 전송\r\n\r\n        try {\r\n\r\n          await cancelReserveScale(s.id);\r\n\r\n          console.log('✅ 예약 취소 완료:', s.id);\r\n\r\n        } catch (err) {\r\n\r\n          console.error('❌ 예약 취소 실패:', err);\r\n\r\n          // 취소 실패해도 일단 목록에서는 제거 (이미 실행됐을 수 있음)\r\n\r\n        }\r\n\r\n\r\n\r\n        const idx = schedules.findIndex(function (x) { return x.id === s.id; });\r\n\r\n        if (idx > -1) {\r\n\r\n          schedules.splice(idx, 1);\r\n\r\n          renderList();\r\n\r\n        }\r\n\r\n      });\r\n\r\n\r\n\r\n      item.appendChild(info);\r\n\r\n      item.appendChild(removeBtn);\r\n\r\n      activeList.appendChild(item);\r\n\r\n    });\r\n\r\n  }\r\n\r\n\r\n\r\n  // ============ 7. Apply (cloneNode로 기존 핸들러 완전 제거) ============\r\n\r\n  const newApplyBtn = applyBtn.cloneNode(true);\r\n\r\n  applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);\r\n\r\n\r\n\r\n  let isProcessing = false;\r\n\r\n\r\n\r\n  newApplyBtn.addEventListener('click', async function (e) {\r\n\r\n    e.preventDefault();\r\n\r\n    e.stopPropagation();\r\n\r\n\r\n\r\n    if (isProcessing) return;\r\n\r\n\r\n\r\n    const now = Date.now();\r\n\r\n    if (window.__lastApplyTime && now - window.__lastApplyTime < 300) {\r\n\r\n      return;\r\n\r\n    }\r\n\r\n    window.__lastApplyTime = now;\r\n\r\n\r\n\r\n    isProcessing = true;\r\n\r\n    newApplyBtn.disabled = true;\r\n\r\n\r\n\r\n    try {\r\n\r\n      const reserveAt = reserveInput.value;\r\n\r\n      const duration = parseInt(durationInput.value, 10);\r\n\r\n      const capacity = parseInt(capSlider.value, 10);\r\n\r\n\r\n\r\n      if (!reserveAt) {\r\n\r\n        alert('예약 시간을 선택해주세요.');\r\n\r\n        return;\r\n\r\n      }\r\n\r\n      if (!duration || duration < 1) {\r\n\r\n        alert('Duration을 올바르게 입력해주세요.');\r\n\r\n        return;\r\n\r\n      }\r\n\r\n      if (new Date(reserveAt).getTime() <= Date.now()) {\r\n\r\n        alert('예약 시간은 현재 시간 이후여야 합니다.');\r\n\r\n        return;\r\n\r\n      }\r\n\r\n\r\n\r\n      const newSchedule = {\r\n\r\n        id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),\r\n\r\n        reserveAt: reserveAt,\r\n\r\n        duration: duration,\r\n\r\n        capacity: capacity\r\n\r\n      };\r\n\r\n\r\n\r\n      // ✅ FastAPI에 예약 등록 요청\r\n\r\n      try {\r\n\r\n        await registerReserveScale(\r\n\r\n          newSchedule.id,\r\n\r\n          newSchedule.reserveAt,\r\n\r\n          newSchedule.capacity,\r\n\r\n          newSchedule.duration\r\n\r\n        );\r\n\r\n        console.log('✅ 예약 등록 완료:', newSchedule.id);\r\n\r\n      } catch (err) {\r\n\r\n        console.error('❌ 예약 등록 실패:', err);\r\n\r\n        alert('예약 등록에 실패했습니다: ' + err.message);\r\n\r\n        return;\r\n\r\n      }\r\n\r\n\r\n\r\n      schedules.push(newSchedule);\r\n\r\n      renderList();\r\n\r\n    } finally {\r\n\r\n      setTimeout(function () {\r\n\r\n        isProcessing = false;\r\n\r\n        newApplyBtn.disabled = false;\r\n\r\n      }, 300);\r\n\r\n    }\r\n\r\n  });\r\n\r\n\r\n\r\n  // ============ ✅ 8. 서버에서 예약 목록 동기화 ============\r\n  async function loadSchedulesFromServer() {\r\n    try {\r\n      const res = await fetch(`${API_BASE}/reserve_scale`);\r\n      if (!res.ok) throw new Error('서버 응답 오류: ' + res.status);\r\n      const data = await res.json();\r\n\r\n      schedules.length = 0;\r\n      (data.schedules || []).forEach(s => {\r\n        schedules.push({\r\n          id: s.schedule_id,\r\n          reserveAt: s.reserve_at,\r\n          capacity: s.capacity,\r\n          duration: s.duration\r\n        });\r\n      });\r\n\r\n      renderList();\r\n      console.log(`✅ 서버에서 예약 ${schedules.length}개 불러옴`);\r\n    } catch (err) {\r\n      console.error('❌ 예약 목록 불러오기 실패:', err);\r\n      renderList();\r\n    }\r\n  }\r\n\r\n  loadSchedulesFromServer();   // ← renderList() 대신 이거 호출\r\n\r\n})();",
+        "content": "```json\n{{{json @root}}}\n```",
+        "contentPartials": [],
+        "defaultContent": "<div id=\"scaling-duration-controller\" class=\"scaling-card\">\r\n  <div class=\"header\">\r\n    <span class=\"bar\"></span>\r\n    <h2>SCHEDULED SCALING — DURATION CONTROL</h2>\r\n  </div>\r\n\r\n  <!-- 1. CURRENT TIME -->\r\n  <div class=\"section\">\r\n    <label>CURRENT TIME (KST)</label>\r\n    <div class=\"display-box\" id=\"currentTime\">--:--:--</div>\r\n  </div>\r\n\r\n  <!-- 2. RESERVE TIME (START DELAY → 변경) -->\r\n  <div class=\"section\">\r\n    <label>RESERVE TIME</label>\r\n    <div class=\"reserve-input-wrap\">\r\n      <input type=\"datetime-local\" id=\"reserve-input\" />\r\n    </div>\r\n  </div>\r\n\r\n  <!-- DURATION -->\r\n  <div class=\"section\">\r\n    <label>DURATION (MINUTES)</label>\r\n    <div class=\"duration-buttons\">\r\n      <button class=\"dur-btn\" data-min=\"5\" type=\"button\">5분</button>\r\n      <button class=\"dur-btn\" data-min=\"10\" type=\"button\">10분</button>\r\n      <button class=\"dur-btn\" data-min=\"30\" type=\"button\">30분</button>\r\n      <button class=\"dur-btn\" data-min=\"60\" type=\"button\">60분</button>\r\n      <button class=\"dur-btn\" data-min=\"120\" type=\"button\">120분</button>\r\n    </div>\r\n    <div class=\"custom-input-wrap\">\r\n      <button class=\"arrow-btn\" data-delta=\"-1\" type=\"button\">−</button>\r\n      <input type=\"number\" id=\"duration-input\" value=\"10\" min=\"1\" max=\"240\" />\r\n      <span class=\"unit\">분</span>\r\n      <button class=\"arrow-btn\" data-delta=\"1\" type=\"button\">+</button>\r\n    </div>\r\n  </div>\r\n\r\n  <!-- 3. TARGET CAPACITY (간격 조정) -->\r\n  <div class=\"section\">\r\n    <div class=\"cap-label-row\">\r\n      <label class=\"inline-label\">TARGET CAPACITY</label>\r\n      <span class=\"cap-info\">\r\n        <span id=\"capValue\" class=\"cap-num\">4</span>\r\n        <span class=\"cap-unit\">instances</span>\r\n      </span>\r\n    </div>\r\n    <input type=\"range\" id=\"capacity-slider\" min=\"1\" max=\"8\" value=\"4\" />\r\n    <div class=\"ticks\">\r\n      <span>1</span><span>2</span><span>3</span><span>4</span>\r\n      <span>5</span><span>6</span><span>7</span><span>8</span>\r\n    </div>\r\n  </div>\r\n\r\n  <button class=\"apply-btn\" id=\"apply-btn\" type=\"button\">\r\n    Apply Scaling Schedule\r\n  </button>\r\n\r\n  <!-- 4. ACTIVE SCHEDULE -->\r\n  <div class=\"active-section\">\r\n    <div class=\"active-label\">ACTIVE SCHEDULE</div>\r\n    <div id=\"activeList\" class=\"active-list\">\r\n      <div class=\"empty\">활성화된 스케일링 없음</div>\r\n    </div>\r\n  </div>\r\n</div>\r\n\r\n<style>\r\n#scaling-duration-controller {\r\n  background: linear-gradient(180deg, #0f1419 0%, #0a0d12 100%);\r\n  border: 1px solid #1f2937;\r\n  border-radius: 12px;\r\n  padding: 24px;\r\n  color: #e5e7eb;\r\n  font-family: 'Inter', -apple-system, sans-serif;\r\n  box-sizing: border-box;\r\n}\r\n#scaling-duration-controller *,\r\n#scaling-duration-controller *::before,\r\n#scaling-duration-controller *::after { box-sizing: border-box; }\r\n\r\n#scaling-duration-controller .header {\r\n  display: flex; align-items: center; gap: 10px; margin-bottom: 24px;\r\n}\r\n#scaling-duration-controller .header .bar {\r\n  width: 4px; height: 20px; background: #a855f7; border-radius: 2px;\r\n}\r\n#scaling-duration-controller .header h2 {\r\n  font-size: 14px; letter-spacing: 1.5px; margin: 0; color: #fff;\r\n}\r\n\r\n#scaling-duration-controller .section { margin-bottom: 20px; }\r\n#scaling-duration-controller .section label {\r\n  display: block; font-size: 12px; color: #9ca3af;\r\n  letter-spacing: 1px; margin-bottom: 8px;\r\n}\r\n\r\n#scaling-duration-controller .display-box {\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 12px 16px;\r\n  font-family: 'JetBrains Mono', monospace;\r\n  color: #60a5fa; font-size: 16px;\r\n}\r\n\r\n/* ===== RESERVE TIME ===== */\r\n#scaling-duration-controller .reserve-input-wrap {\r\n  display: flex; align-items: center; gap: 8px;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 6px 12px;\r\n}\r\n#scaling-duration-controller #reserve-input {\r\n  flex: 1;\r\n  background: transparent;\r\n  border: none;\r\n  color: #60a5fa;\r\n  font-size: 15px;\r\n  font-family: 'JetBrains Mono', monospace;\r\n  outline: none;\r\n  padding: 8px 4px;\r\n  cursor: pointer;\r\n  color-scheme: dark;\r\n}\r\n#scaling-duration-controller #reserve-input::-webkit-calendar-picker-indicator {\r\n  filter: invert(60%) sepia(80%) saturate(500%) hue-rotate(240deg);\r\n  cursor: pointer;\r\n  opacity: 0.9;\r\n}\r\n\r\n/* ===== DURATION ===== */\r\n#scaling-duration-controller .duration-buttons {\r\n  display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;\r\n}\r\n#scaling-duration-controller .dur-btn {\r\n  flex: 1; min-width: 60px; padding: 10px;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 6px; color: #e5e7eb;\r\n  cursor: pointer; transition: all 0.2s; font-size: 13px;\r\n}\r\n#scaling-duration-controller .dur-btn:hover { background: #1f2937; }\r\n#scaling-duration-controller .dur-btn.active {\r\n  background: #7c3aed; border-color: #a855f7; color: #fff;\r\n}\r\n\r\n#scaling-duration-controller .custom-input-wrap {\r\n  display: flex; align-items: center; gap: 8px;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 6px;\r\n}\r\n#scaling-duration-controller .arrow-btn {\r\n  width: 32px; height: 32px;\r\n  background: #1f2937; border: none; border-radius: 6px;\r\n  color: #a855f7; font-size: 18px; cursor: pointer;\r\n  font-weight: bold; flex-shrink: 0;\r\n}\r\n#scaling-duration-controller .arrow-btn:hover { background: #374151; }\r\n#scaling-duration-controller #duration-input {\r\n  flex: 1; background: transparent; border: none;\r\n  color: #e5e7eb; font-size: 16px; text-align: center;\r\n  outline: none; font-family: 'JetBrains Mono', monospace;\r\n  min-width: 0;\r\n}\r\n#scaling-duration-controller #duration-input::-webkit-inner-spin-button,\r\n#scaling-duration-controller #duration-input::-webkit-outer-spin-button {\r\n  -webkit-appearance: none; margin: 0;\r\n}\r\n#scaling-duration-controller .unit {\r\n  color: #6b7280; font-size: 13px; padding-right: 4px;\r\n}\r\n\r\n/* ===== TARGET CAPACITY ===== */\r\n#scaling-duration-controller .cap-label-row {\r\n  display: flex;\r\n  justify-content: space-between;\r\n  align-items: center;\r\n  gap: 16px;                /* ✅ 라벨 ↔ 숫자영역 최소 간격 보장 */\r\n  margin-bottom: 8px;\r\n}\r\n#scaling-duration-controller .inline-label {\r\n  font-size: 12px;\r\n  color: #9ca3af;\r\n  letter-spacing: 1px;\r\n  margin: 0;\r\n  white-space: nowrap;      /* ✅ 라벨 줄바꿈 방지 */\r\n}\r\n#scaling-duration-controller .cap-info {\r\n  display: inline-flex;\r\n  align-items: baseline;\r\n  gap: 8px;                 /* 숫자 ↔ instances 간격 */\r\n  font-size: 13px;\r\n  color: #9ca3af;\r\n  white-space: nowrap;      /* ✅ 줄바꿈 방지 */\r\n  margin-left: auto;        /* ✅ 무조건 오른쪽으로 밀기 */\r\n}\r\n#scaling-duration-controller .cap-num {\r\n  color: #a855f7;\r\n  font-weight: bold;\r\n  font-size: 16px;\r\n  margin-left: 4px;         /* ✅ 추가 여백 (선택) */\r\n}\r\n#scaling-duration-controller .cap-unit {\r\n  color: #9ca3af;\r\n}\r\n\r\n#scaling-duration-controller #capacity-slider {\r\n  width: 100%; -webkit-appearance: none; appearance: none;\r\n  height: 4px; border-radius: 2px; outline: none;\r\n  background: #1f2937;\r\n}\r\n#scaling-duration-controller #capacity-slider::-webkit-slider-thumb {\r\n  -webkit-appearance: none; appearance: none;\r\n  width: 18px; height: 18px;\r\n  background: #a855f7; border-radius: 50%; cursor: pointer;\r\n  box-shadow: 0 0 10px rgba(168,85,247,0.6);\r\n}\r\n#scaling-duration-controller #capacity-slider::-moz-range-thumb {\r\n  width: 18px; height: 18px; border: none;\r\n  background: #a855f7; border-radius: 50%; cursor: pointer;\r\n  box-shadow: 0 0 10px rgba(168,85,247,0.6);\r\n}\r\n#scaling-duration-controller .ticks {\r\n  display: flex; justify-content: space-between;\r\n  color: #4b5563; font-size: 11px; margin-top: 6px;\r\n}\r\n\r\n/* ===== APPLY BUTTON ===== */\r\n#scaling-duration-controller .apply-btn {\r\n  width: 100%; padding: 14px; border: none; border-radius: 8px;\r\n  color: #fff; font-size: 14px; font-weight: 600;\r\n  cursor: pointer; margin-top: 8px;\r\n  background: linear-gradient(90deg, #7c3aed, #a855f7);\r\n  transition: all 0.2s;\r\n}\r\n#scaling-duration-controller .apply-btn:hover {\r\n  box-shadow: 0 0 20px rgba(168,85,247,0.4);\r\n}\r\n\r\n/* ===== ACTIVE SCHEDULE ===== */\r\n#scaling-duration-controller .active-section { margin-top: 24px; }\r\n#scaling-duration-controller .active-label {\r\n  font-size: 11px; color: #6b7280;\r\n  letter-spacing: 1.5px; margin-bottom: 10px;\r\n}\r\n#scaling-duration-controller .active-list .item {\r\n  display: flex; align-items: center; justify-content: space-between;\r\n  background: #0a0d12; border: 1px solid #1f2937;\r\n  border-radius: 8px; padding: 12px 14px; margin-bottom: 8px;\r\n  font-size: 13px;\r\n}\r\n#scaling-duration-controller .active-list .item .item-info {\r\n  display: flex; flex-direction: column; gap: 4px;\r\n}\r\n#scaling-duration-controller .active-list .item .item-title {\r\n  color: #e5e7eb; font-weight: 600;\r\n}\r\n#scaling-duration-controller .active-list .item .sub {\r\n  color: #6b7280; font-size: 11px;\r\n  font-family: 'JetBrains Mono', monospace;\r\n}\r\n#scaling-duration-controller .active-list .item .remove-btn {\r\n  background: transparent; border: 1px solid #1f2937;\r\n  color: #ef4444; font-size: 14px; cursor: pointer;\r\n  width: 28px; height: 28px; border-radius: 6px;\r\n  display: flex; align-items: center; justify-content: center;\r\n  transition: all 0.2s; flex-shrink: 0;\r\n}\r\n#scaling-duration-controller .active-list .item .remove-btn:hover {\r\n  background: #ef4444; color: #fff; border-color: #ef4444;\r\n}\r\n#scaling-duration-controller .active-list .empty {\r\n  color: #4b5563; font-size: 13px;\r\n  text-align: center; padding: 16px;\r\n}\r\n</style>",
+        "editor": {
+          "format": "auto",
+          "language": "markdown"
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
+        "editors": [
+          "afterRender"
+        ],
+        "externalStyles": [],
+        "helpers": "",
+        "renderMode": "everyRow",
+        "styles": "",
+        "wrap": true
       },
-      "pluginVersion": "11.6.15",
+      "pluginVersion": "6.2.3",
       "targets": [
         {
-          "editorMode": "code",
-          "expr": "avg((1 - (node_filesystem_avail_bytes{fstype=~\"ext4|xfs\"} / node_filesystem_size_bytes{fstype=~\"ext4|xfs\"})) * 100)\r\n\r\n",
-          "legendFormat": "저장장치 사용량",
-          "range": true,
           "refId": "A"
         }
       ],
-      "title": "AVG HDD Uses",
-      "type": "timeseries"
+      "title": "Panel Title",
+      "type": "marcusolsson-dynamictext-panel"
     },
     {
       "collapsed": true,
@@ -574,7 +295,418 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 22
+      },
+      "id": 342,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "#EAB839",
+                    "value": 50
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 0,
+            "y": 23
+          },
+          "id": 345,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.6.15",
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "avg(100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
+              "interval": "",
+              "legendFormat": "AVG CPU",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "AVG Cpu Uses",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "#EAB839",
+                    "value": 59.9995
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 6,
+            "y": 23
+          },
+          "id": 346,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.6.15",
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)",
+              "legendFormat": "AVG MEMORY",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "AVG Memory Uses",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "binbps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 12,
+            "y": 23
+          },
+          "id": 347,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.6.15",
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "avg(rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])) * 8",
+              "legendFormat": "서버가 받은 트래픽(다운로드)",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
+              "editorMode": "code",
+              "expr": "avg(rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])) * 8",
+              "hide": false,
+              "instant": false,
+              "legendFormat": "서버가 보낸 트래픽(업로드)",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "AVG Network Traffic Uses",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "barWidthFactor": 0.6,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 9,
+            "w": 6,
+            "x": 18,
+            "y": 23
+          },
+          "id": 343,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "hideZeros": false,
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "pluginVersion": "11.6.15",
+          "targets": [
+            {
+              "editorMode": "code",
+              "expr": "avg((1 - (node_filesystem_avail_bytes{fstype=~\"ext4|xfs\"} / node_filesystem_size_bytes{fstype=~\"ext4|xfs\"})) * 100)\r\n\r\n",
+              "legendFormat": "저장장치 사용량",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "AVG HDD Uses",
+          "type": "timeseries"
+        }
+      ],
+      "title": "Control Tower",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
       },
       "id": 261,
       "panels": [
@@ -1380,7 +1512,7 @@
             "h": 2,
             "w": 2,
             "x": 18,
-            "y": 23
+            "y": 41
           },
           "id": 14,
           "maxDataPoints": 100,
@@ -1459,7 +1591,7 @@
             "h": 2,
             "w": 4,
             "x": 20,
-            "y": 23
+            "y": 41
           },
           "id": 15,
           "maxDataPoints": 100,
@@ -1505,7 +1637,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 24
       },
       "id": 263,
       "panels": [
@@ -2005,7 +2137,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 29
+            "y": 47
           },
           "id": 74,
           "options": {
@@ -2109,7 +2241,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 29
+            "y": 47
           },
           "id": 152,
           "options": {
@@ -2150,7 +2282,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 25
       },
       "id": 265,
       "panels": [
@@ -2367,7 +2499,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 43
+            "y": 61
           },
           "id": 3,
           "options": {
@@ -2705,7 +2837,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 43
+            "y": 61
           },
           "id": 24,
           "options": {
@@ -2888,7 +3020,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 495
+            "y": 513
           },
           "id": 84,
           "options": {
@@ -3007,7 +3139,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 495
+            "y": 513
           },
           "id": 338,
           "options": {
@@ -3126,7 +3258,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 507
+            "y": 525
           },
           "id": 229,
           "options": {
@@ -3243,7 +3375,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 507
+            "y": 525
           },
           "id": 42,
           "options": {
@@ -3350,7 +3482,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 519
+            "y": 537
           },
           "id": 43,
           "options": {
@@ -3469,7 +3601,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 519
+            "y": 537
           },
           "id": 156,
           "options": {
@@ -3567,7 +3699,7 @@
             "h": 12,
             "w": 12,
             "x": 0,
-            "y": 531
+            "y": 549
           },
           "id": 127,
           "options": {
@@ -3690,7 +3822,7 @@
             "h": 12,
             "w": 12,
             "x": 12,
-            "y": 531
+            "y": 549
           },
           "id": 322,
           "options": {
@@ -3780,7 +3912,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 26
       },
       "id": 266,
       "panels": [
@@ -3867,7 +3999,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 794
+            "y": 812
           },
           "id": 135,
           "options": {
@@ -3975,7 +4107,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 794
+            "y": 812
           },
           "id": 130,
           "options": {
@@ -4100,7 +4232,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 994
+            "y": 1012
           },
           "id": 131,
           "options": {
@@ -4207,7 +4339,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 994
+            "y": 1012
           },
           "id": 138,
           "options": {
@@ -4366,7 +4498,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 1004
+            "y": 1022
           },
           "id": 136,
           "options": {
@@ -4474,7 +4606,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 1004
+            "y": 1022
           },
           "id": 191,
           "options": {
@@ -4600,7 +4732,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 1014
+            "y": 1032
           },
           "id": 160,
           "options": {
@@ -4749,7 +4881,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 1014
+            "y": 1032
           },
           "id": 70,
           "options": {
@@ -4865,7 +4997,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 1024
+            "y": 1042
           },
           "id": 129,
           "options": {
@@ -4972,7 +5104,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 1024
+            "y": 1042
           },
           "id": 137,
           "options": {
@@ -5084,7 +5216,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 1034
+            "y": 1052
           },
           "id": 128,
           "options": {
@@ -5202,7 +5334,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 1034
+            "y": 1052
           },
           "id": 140,
           "options": {
@@ -5274,7 +5406,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 27
       },
       "id": 267,
       "panels": [
@@ -5353,7 +5485,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 795
+            "y": 813
           },
           "id": 176,
           "options": {
@@ -5472,7 +5604,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 795
+            "y": 813
           },
           "id": 22,
           "options": {
@@ -5616,7 +5748,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 975
+            "y": 993
           },
           "id": 175,
           "options": {
@@ -5749,7 +5881,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 975
+            "y": 993
           },
           "id": 307,
           "options": {
@@ -5795,7 +5927,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 28
       },
       "id": 293,
       "panels": [
@@ -5861,7 +5993,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 796
+            "y": 814
           },
           "id": 260,
           "options": {
@@ -5979,7 +6111,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 796
+            "y": 814
           },
           "id": 291,
           "options": {
@@ -6077,7 +6209,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 946
+            "y": 964
           },
           "id": 168,
           "options": {
@@ -6207,7 +6339,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 946
+            "y": 964
           },
           "id": 333,
           "options": {
@@ -6315,7 +6447,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 956
+            "y": 974
           },
           "id": 334,
           "options": {
@@ -6427,7 +6559,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 956
+            "y": 974
           },
           "id": 335,
           "options": {
@@ -6503,7 +6635,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 29
       },
       "id": 312,
       "panels": [
@@ -6574,7 +6706,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 797
+            "y": 815
           },
           "id": 62,
           "options": {
@@ -6766,7 +6898,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 797
+            "y": 815
           },
           "id": 315,
           "options": {
@@ -6865,7 +6997,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 827
+            "y": 845
           },
           "id": 148,
           "options": {
@@ -6979,7 +7111,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 827
+            "y": 845
           },
           "id": 305,
           "options": {
@@ -7130,7 +7262,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 837
+            "y": 855
           },
           "id": 313,
           "options": {
@@ -7269,7 +7401,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 837
+            "y": 855
           },
           "id": 314,
           "options": {
@@ -7325,7 +7457,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 30
       },
       "id": 269,
       "panels": [
@@ -7392,7 +7524,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 878
+            "y": 896
           },
           "id": 8,
           "options": {
@@ -7529,7 +7661,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 878
+            "y": 896
           },
           "id": 7,
           "options": {
@@ -7720,7 +7852,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 888
+            "y": 906
           },
           "id": 321,
           "options": {
@@ -7838,7 +7970,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 888
+            "y": 906
           },
           "id": 306,
           "options": {
@@ -7937,7 +8069,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 898
+            "y": 916
           },
           "id": 259,
           "options": {
@@ -8066,7 +8198,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 898
+            "y": 916
           },
           "id": 151,
           "options": {
@@ -8120,7 +8252,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 31
       },
       "id": 304,
       "panels": [
@@ -8207,7 +8339,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 799
+            "y": 817
           },
           "id": 158,
           "options": {
@@ -8362,7 +8494,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 799
+            "y": 817
           },
           "id": 300,
           "options": {
@@ -8464,7 +8596,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 809
+            "y": 827
           },
           "id": 302,
           "options": {
@@ -8563,7 +8695,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 809
+            "y": 827
           },
           "id": 325,
           "options": {
@@ -8620,7 +8752,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 32
       },
       "id": 296,
       "panels": [
@@ -8762,7 +8894,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 4290
+            "y": 4308
           },
           "id": 298,
           "options": {
@@ -8901,7 +9033,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 4290
+            "y": 4308
           },
           "id": 331,
           "options": {
@@ -9000,7 +9132,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 4300
+            "y": 4318
           },
           "id": 297,
           "options": {
@@ -9099,7 +9231,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 4300
+            "y": 4318
           },
           "id": 332,
           "options": {
@@ -9145,7 +9277,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 33
       },
       "id": 270,
       "panels": [
@@ -9239,7 +9371,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 91
+            "y": 109
           },
           "id": 9,
           "options": {
@@ -9371,7 +9503,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 91
+            "y": 109
           },
           "id": 33,
           "options": {
@@ -9507,7 +9639,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 451
+            "y": 469
           },
           "id": 37,
           "options": {
@@ -9630,7 +9762,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 451
+            "y": 469
           },
           "id": 35,
           "options": {
@@ -9755,7 +9887,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 461
+            "y": 479
           },
           "id": 133,
           "options": {
@@ -9876,7 +10008,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 461
+            "y": 479
           },
           "id": 36,
           "options": {
@@ -10007,7 +10139,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 471
+            "y": 489
           },
           "id": 301,
           "options": {
@@ -10138,7 +10270,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 471
+            "y": 489
           },
           "id": 326,
           "options": {
@@ -10252,7 +10384,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 481
+            "y": 499
           },
           "id": 34,
           "options": {
@@ -10297,7 +10429,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 34
       },
       "id": 271,
       "panels": [
@@ -10394,7 +10526,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 92
+            "y": 110
           },
           "id": 28,
           "options": {
@@ -10501,7 +10633,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 92
+            "y": 110
           },
           "id": 41,
           "options": {
@@ -10600,7 +10732,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 432
+            "y": 450
           },
           "id": 44,
           "options": {
@@ -10708,7 +10840,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 432
+            "y": 450
           },
           "id": 219,
           "options": {
@@ -10753,7 +10885,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 35
       },
       "id": 272,
       "panels": [
@@ -10832,7 +10964,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 93
+            "y": 111
           },
           "id": 60,
           "options": {
@@ -10954,7 +11086,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 93
+            "y": 111
           },
           "id": 142,
           "options": {
@@ -11074,7 +11206,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 313
+            "y": 331
           },
           "id": 143,
           "options": {
@@ -11194,7 +11326,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 313
+            "y": 331
           },
           "id": 141,
           "options": {
@@ -11301,7 +11433,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 323
+            "y": 341
           },
           "id": 146,
           "options": {
@@ -11399,7 +11531,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 323
+            "y": 341
           },
           "id": 327,
           "options": {
@@ -11497,7 +11629,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 333
+            "y": 351
           },
           "id": 145,
           "options": {
@@ -11608,7 +11740,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 333
+            "y": 351
           },
           "id": 144,
           "options": {
@@ -11728,7 +11860,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 343
+            "y": 361
           },
           "id": 232,
           "options": {
@@ -11826,7 +11958,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 343
+            "y": 361
           },
           "id": 231,
           "options": {
@@ -11925,7 +12057,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 353
+            "y": 371
           },
           "id": 230,
           "options": {
@@ -12053,7 +12185,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 353
+            "y": 371
           },
           "id": 61,
           "options": {
@@ -12159,7 +12291,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 363
+            "y": 381
           },
           "id": 309,
           "options": {
@@ -12236,7 +12368,7 @@
             "h": 10,
             "w": 6,
             "x": 12,
-            "y": 363
+            "y": 381
           },
           "id": 280,
           "options": {
@@ -12309,7 +12441,7 @@
             "h": 10,
             "w": 6,
             "x": 18,
-            "y": 363
+            "y": 381
           },
           "id": 288,
           "options": {
@@ -12361,7 +12493,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 36
       },
       "id": 273,
       "panels": [
@@ -12428,7 +12560,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 94
+            "y": 112
           },
           "id": 63,
           "options": {
@@ -12558,7 +12690,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 94
+            "y": 112
           },
           "id": 124,
           "options": {
@@ -12668,7 +12800,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 104
+            "y": 122
           },
           "id": 126,
           "options": {
@@ -12768,7 +12900,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 104
+            "y": 122
           },
           "id": 125,
           "options": {
@@ -12878,7 +13010,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 114
+            "y": 132
           },
           "id": 220,
           "options": {
@@ -12996,7 +13128,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 114
+            "y": 132
           },
           "id": 339,
           "options": {
@@ -13106,7 +13238,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 124
+            "y": 142
           },
           "id": 336,
           "options": {
@@ -13228,7 +13360,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 124
+            "y": 142
           },
           "id": 290,
           "options": {
@@ -13341,7 +13473,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 134
+            "y": 152
           },
           "id": 310,
           "options": {
@@ -13460,7 +13592,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 134
+            "y": 152
           },
           "id": 330,
           "options": {
@@ -13517,7 +13649,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 37
       },
       "id": 274,
       "panels": [
@@ -13596,7 +13728,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 225
+            "y": 243
           },
           "id": 221,
           "options": {
@@ -13721,7 +13853,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 225
+            "y": 243
           },
           "id": 299,
           "options": {
@@ -13842,7 +13974,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 255
+            "y": 273
           },
           "id": 55,
           "options": {
@@ -13967,7 +14099,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 255
+            "y": 273
           },
           "id": 115,
           "options": {
@@ -14076,7 +14208,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 265
+            "y": 283
           },
           "id": 104,
           "options": {
@@ -14246,7 +14378,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 265
+            "y": 283
           },
           "id": 109,
           "options": {
@@ -14382,7 +14514,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 275
+            "y": 293
           },
           "id": 50,
           "options": {
@@ -14496,7 +14628,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 275
+            "y": 293
           },
           "id": 91,
           "options": {
@@ -14645,7 +14777,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 285
+            "y": 303
           },
           "id": 85,
           "options": {
@@ -14753,7 +14885,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 285
+            "y": 303
           },
           "id": 337,
           "options": {
@@ -14862,7 +14994,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 295
+            "y": 313
           },
           "id": 82,
           "options": {
@@ -14972,7 +15104,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 295
+            "y": 313
           },
           "id": 320,
           "options": {
@@ -15112,7 +15244,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 305
+            "y": 323
           },
           "id": 341,
           "options": {
@@ -15255,7 +15387,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 305
+            "y": 323
           },
           "id": 340,
           "options": {
@@ -15309,7 +15441,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 38
       },
       "id": 279,
       "panels": [
@@ -15379,7 +15511,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 48
+            "y": 66
           },
           "id": 40,
           "options": {
@@ -15477,7 +15609,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 48
+            "y": 66
           },
           "id": 308,
           "options": {
@@ -15630,7 +15762,7 @@
             "h": 10,
             "w": 10,
             "x": 0,
-            "y": 58
+            "y": 76
           },
           "id": 149,
           "options": {
@@ -15791,7 +15923,7 @@
             "h": 10,
             "w": 10,
             "x": 10,
-            "y": 58
+            "y": 76
           },
           "id": 64,
           "options": {
@@ -15872,7 +16004,7 @@
             "h": 10,
             "w": 4,
             "x": 20,
-            "y": 58
+            "y": 76
           },
           "id": 157,
           "options": {
@@ -15952,8 +16084,8 @@
       },
       {
         "current": {
-          "text": "scrape_data_from_ec2-node-exporter",
-          "value": "scrape_data_from_ec2-node-exporter"
+          "text": "aws-was-nodes",
+          "value": "aws-was-nodes"
         },
         "datasource": {
           "type": "prometheus",
@@ -15975,8 +16107,8 @@
       },
       {
         "current": {
-          "text": "ip-10-0-1-120.ap-northeast-2.compute.internal",
-          "value": "ip-10-0-1-120.ap-northeast-2.compute.internal"
+          "text": "ip-10-0-10-25.ap-northeast-2.compute.internal",
+          "value": "ip-10-0-10-25.ap-northeast-2.compute.internal"
         },
         "datasource": {
           "type": "prometheus",
@@ -15998,8 +16130,8 @@
       },
       {
         "current": {
-          "text": "3.38.210.101:9100",
-          "value": "3.38.210.101:9100"
+          "text": "10.0.10.25:9100",
+          "value": "10.0.10.25:9100"
         },
         "datasource": {
           "type": "prometheus",
@@ -16027,7 +16159,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Node Exporter Full Copy",
-  "uid": "cfoschgq7ls00a",
-  "version": 8
+  "title": "last_last_last",
+  "uid": "dfpl1krt8p1j4d",
+  "version": 2
 }

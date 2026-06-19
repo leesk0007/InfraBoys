@@ -1,9 +1,59 @@
-import asyncio
+import asyncio, pytz, os, time, boto3, ntplib
 from datetime import datetime
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+
+KST = pytz.timezone('Asia/Seoul')
+# =========================================
+# 깃허브 / AWS 환경변수 불러오기 
+# =========================================
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPO = os.getenv("GITHUB_REPO")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY") 
+
+
+# ====================================================================
+# Grafana 대시보드에서 예약한 시간에 스케쥴을 작동시키기 위한 스케쥴러 실행
+# ====================================================================
+def calculate_ntp_offset():
+    servers = ['time.kriss.re.kr', 'kr.pool.ntp.org', 'time.google.com']
+    for server in servers:
+        try:
+            client = ntplib.NTPClient()
+            response = client.request(server, version=3, timeout=5)
+            print(f" NTP 동기화 성공: {server}, 오프셋: {response.offset:.2f}초")
+            return response.offset
+        except Exception as e:
+            print(f" {server} 실패: {e}")
+    print(" 모든 NTP 서버 실패")
+    return 0.0
+
+NTP_OFFSET = calculate_ntp_offset()
+_original_time = time.time
+time.time = lambda: _original_time() + NTP_OFFSET
+
+def now_kst():
+    return datetime.fromtimestamp(time.time(), tz=KST)
+
+
+scheduler = AsyncIOScheduler(timezone=KST)
+
+
+
+# ==================
+# EC2 대수 활성화
+# ==================
+# Grafana 대시보드에서 실제 운영중인 EC2보다 많은 대수의 EC2를 스케일 인 해버리지 않기 위해 불러오기
+AWS_REGION = "ap-northeast-2"
+EC2_MIN_COUNT = 1
+EC2_MAX_COUNT = 8
+
+ec2_client = boto3.client('ec2', region_name=AWS_REGION)
 
 import config
 import analyzer
@@ -141,6 +191,15 @@ async def scale_in(req: ScaleRequest):
     await config.trigger_github_action("scale-in", {"require_ec2": req.delta, "sender": "grafana"})
     return {"status": "success", "message": f"Scale-In -{req.delta} triggered", "current": current, "after_expected": after}
 
+    await trigger_github_action("scale-in", {"require_ec2": req.delta, "sender": "grafana"})
+
+    return {
+        "status": "success",
+        "message": f"Scale-In -{req.delta} triggered",
+        "current": current,
+        "after_expected": after,
+    }
+# grafana에서 예약 autoscale
 @app.post("/api/reserve_scale")
 async def reserve_scale(req: ReserveScaleRequest):
     try:
@@ -306,3 +365,29 @@ async def troubleshoot(request: Request):
 
     print("="*50)
     return {"status": "received", "count": len(alerts), "priority": priority}
+
+    # scale-in은 항상 1대 감소
+    await trigger_github_action("scale-in", {
+        "require_ec2": 1,
+        "sender": "alertmanager"
+    })
+
+    return {"status": "triggered", "replicas": 1}
+# ============================
+# github로 요청 날리는 형식
+# ============================
+async def trigger_github_action(event_type: str, payload: dict):
+    print(f" [{now_kst()}] GitHub {event_type} 호출")
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/dispatches"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+    }
+    body = {"event_type": event_type, "client_payload": payload}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(url, headers=headers, json=body)
+        if r.status_code != 204:
+            print(f" GitHub 실패: {r.text}")
+            raise HTTPException(500, f"GitHub API failed: {r.text}")
+    print(f" GitHub {event_type} 성공!")
+    return {"triggered": True}
