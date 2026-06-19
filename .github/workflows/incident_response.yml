@@ -1,0 +1,99 @@
+name: "Incident Response"
+
+on:
+  # 1) 수동 실행 (UI에서)
+  workflow_dispatch:
+    inputs:
+      target_ip:
+        description: "접속 테스트할 서버의 Private IP (예: 10.0.10.40)"
+        required: true
+        default: "10.0.10.4"
+      playbook:
+        description: "실행할 Ansible Playbook 선택"
+        required: true
+        type: choice
+        options:
+          - restart_nginx.yml
+          - kill_process.yml
+          - cleanup_disk.yml
+        default: restart_nginx.yml
+      pid:
+        description: "종료할 프로세스 PID (kill_process.yml 선택 시에만 필수)"
+        required: false
+        default: ""
+
+  # 2) 외부 API 호출 (repository_dispatch)
+  repository_dispatch:
+    types:
+      - incident-response
+
+jobs:
+  test-connection:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ───── 트리거 종류에 따라 입력값 통합 ─────
+      - name: Resolve Inputs
+        id: inputs
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "TARGET_IP=${{ github.event.client_payload.target_ip }}" >> $GITHUB_ENV
+            echo "PLAYBOOK=${{ github.event.client_payload.playbook }}"   >> $GITHUB_ENV
+            echo "PID_INPUT=${{ github.event.client_payload.pid }}"       >> $GITHUB_ENV
+            echo "TRIGGER=repository_dispatch"                            >> $GITHUB_ENV
+          else
+            echo "TARGET_IP=${{ github.event.inputs.target_ip }}" >> $GITHUB_ENV
+            echo "PLAYBOOK=${{ github.event.inputs.playbook }}"   >> $GITHUB_ENV
+            echo "PID_INPUT=${{ github.event.inputs.pid }}"       >> $GITHUB_ENV
+            echo "TRIGGER=workflow_dispatch"                      >> $GITHUB_ENV
+          fi
+
+      - name: Show Trigger Info
+        run: |
+          echo "🔔 Trigger    : $TRIGGER"
+          echo "🎯 Target IP  : $TARGET_IP"
+          echo "📜 Playbook   : $PLAYBOOK"
+          echo "🔢 PID        : ${PID_INPUT:-(none)}"
+
+      - name: Validate Inputs
+        run: |
+          if [ -z "$TARGET_IP" ]; then
+            echo "❌ target_ip가 비어있습니다."
+            exit 1
+          fi
+          if [ -z "$PLAYBOOK" ]; then
+            echo "❌ playbook이 비어있습니다."
+            exit 1
+          fi
+          if [ "$PLAYBOOK" = "kill_process.yml" ] && [ -z "$PID_INPUT" ]; then
+            echo "❌ kill_process.yml 실행 시 PID는 필수입니다."
+            exit 1
+          fi
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_KEY }}" > ~/.ssh/ansible_test_key
+          chmod 600 ~/.ssh/ansible_test_key
+
+      - name: Run Ansible Playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          EXTRA_ARGS=""
+          if [ "$PLAYBOOK" = "kill_process.yml" ]; then
+            EXTRA_ARGS="-e pid=$PID_INPUT"
+          fi
+
+          ansible-playbook -i "${TARGET_IP}," \
+            "$PLAYBOOK" \
+            -u ec2-user \
+            --private-key ~/.ssh/ansible_test_key \
+            $EXTRA_ARGS
+
+      - name: Cleanup SSH Key
+        if: always()
+        run: rm -f ~/.ssh/ansible_test_key

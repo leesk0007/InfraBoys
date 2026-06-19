@@ -1,0 +1,57 @@
+- name: "AIOps: Nginx Service Recovery"
+  hosts: all
+  gather_facts: yes
+  become: false
+  
+  vars:
+    app_dir: "/home/ec2-user/app"
+    service_name: "nginx"
+    health_check_url: "http://localhost/health"
+
+  tasks:
+    - name: "사전 검증: Docker Compose 파일 확인"
+      stat:
+        path: "{{ app_dir }}/docker-compose.yml"
+      register: compose_file
+      failed_when: not compose_file.stat.exists
+
+    # 외부 알림 시스템이 이미 "아프다"고 판정 → 바로 복구
+    - block:
+        - name: "복구: Nginx 강제 재생성"
+          command: "docker compose up -d --force-recreate --no-deps {{ service_name }}"
+          args:
+            chdir: "{{ app_dir }}"
+          register: restart_result
+          changed_when: restart_result.rc == 0
+
+        - name: "안정화 대기"
+          pause:
+            seconds: 3
+
+        - name: "검증: 컨테이너 Running 확인"
+          command: "docker compose ps --status running --services"
+          args:
+            chdir: "{{ app_dir }}"
+          register: running_services
+          changed_when: false
+          failed_when: service_name not in running_services.stdout
+
+        - name: "검증: 복구 후 헬스체크"
+          uri:
+            url: "{{ health_check_url }}"
+            status_code: 200
+            timeout: 5
+          register: health_result
+          until: health_result.status == 200
+          retries: 10
+          delay: 3
+
+        - name: "결과: 복구 성공"
+          debug:
+            msg: "✅ [SUCCESS] {{ inventory_hostname }} 복구 완료"
+
+      rescue:
+        # ... (이전과 동일한 로그 수집)
+        - name: "결과: 복구 실패"
+          fail:
+            msg: "❌ [FAILURE] 자동 복구 실패, 수동 개입 필요"

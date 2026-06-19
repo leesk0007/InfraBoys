@@ -1,0 +1,114 @@
+---
+- name: "AIOps: Abnormal CPU Process Termination"
+  hosts: all
+  gather_facts: yes
+  become: true  # 다른 사용자 프로세스 종료를 위해 root 권한 필요
+  
+  vars:
+    target_pid: "{{ pid }}"           # 외부에서 전달받는 PID (extra-vars)
+    sigterm_wait_seconds: 30          # SIGTERM 후 SIGKILL까지 대기 시간
+
+  tasks:
+    - name: "사전 검증: PID 파라미터 전달 여부 확인"
+      fail:
+        msg: "target PID가 전달되지 않았습니다. -e pid=<PID> 형태로 전달해주세요."
+      when: target_pid is not defined or target_pid | length == 0
+
+    - name: "사전 검증: 대상 프로세스 존재 여부 및 정보 수집"
+      shell: "ps -p {{ target_pid }} -o pid,pcpu,user,comm,args --no-headers"
+      register: proc_info
+      changed_when: false
+      failed_when: proc_info.rc != 0
+
+    - name: "대상 프로세스 정보 출력"
+      debug:
+        msg: "🎯 [TARGET] {{ proc_info.stdout }}"
+
+    - block:
+        # ───── 1단계: SIGTERM (Graceful Shutdown) ─────
+        - name: "조치 1: SIGTERM 전송 (PID {{ target_pid }})"
+          command: "kill -SIGTERM {{ target_pid }}"
+          register: sigterm_result
+          changed_when: sigterm_result.rc == 0
+
+        - name: "Graceful Shutdown 대기 ({{ sigterm_wait_seconds }}초)"
+          pause:
+            seconds: "{{ sigterm_wait_seconds }}"
+
+        # ───── 2단계: 종료 여부 확인 ─────
+        - name: "검증: SIGTERM 후 프로세스 종료 여부 확인"
+          shell: "ps -p {{ target_pid }} -o pid= || true"
+          register: pid_check
+          changed_when: false
+
+        - name: "종료 방식 기록"
+          set_fact:
+            kill_method: "{{ 'SIGTERM (graceful)' if pid_check.stdout | trim == '' else 'SIGKILL (forced)' }}"
+
+        # ───── 3단계: SIGKILL (필요 시) ─────
+        - name: "조치 2: SIGKILL 전송 (SIGTERM 미응답 시)"
+          command: "kill -SIGKILL {{ target_pid }}"
+          when: pid_check.stdout | trim != ""
+          register: sigkill_result
+          changed_when: sigkill_result.rc == 0
+
+        - name: "SIGKILL 후 안정화 대기"
+          pause:
+            seconds: 3
+          when: pid_check.stdout | trim != ""
+
+        # ───── 최종 검증 ─────
+        - name: "최종 검증: 프로세스 완전 종료 확인"
+          shell: "ps -p {{ target_pid }} -o pid= || true"
+          register: pid_final_check
+          changed_when: false
+          failed_when: pid_final_check.stdout | trim != ""
+
+        - name: "시스템 부하 평균 확인"
+          shell: "uptime | awk -F'load average:' '{print $2}'"
+          register: load_avg
+          changed_when: false
+
+        - name: "결과 보고: 성공"
+          debug:
+            msg: |
+              ✅ [SUCCESS] {{ inventory_hostname }} Process terminated.
+              - PID     : {{ target_pid }}
+              - Method  : {{ kill_method }}
+              - Load Avg: {{ load_avg.stdout | trim }}
+
+      rescue:
+        - name: "현재 CPU Top 5 프로세스 수집"
+          shell: "ps -eo pid,pcpu,pmem,user,comm --sort=-pcpu --no-headers | head -n 5"
+          register: top5_cpu
+          changed_when: false
+          ignore_errors: yes
+
+        - name: "시스템 부하 수집"
+          command: "uptime"
+          register: uptime_info
+          changed_when: false
+          ignore_errors: yes
+
+        - name: "대상 프로세스 잔존 여부 재확인"
+          shell: "ps -p {{ target_pid }} -o pid,pcpu,pmem,user,comm,args --no-headers || echo 'Process not found'"
+          register: proc_detail
+          changed_when: false
+          ignore_errors: yes
+
+        - name: "결과 보고: 실패"
+          fail:
+            msg: |
+              ❌ [FAILURE] {{ inventory_hostname }} Process termination failed!
+              
+              === Target PID ===
+              {{ target_pid }}
+              
+              === Process Status ===
+              {{ proc_detail.stdout | default('N/A') }}
+              
+              === Top 5 CPU Processes ===
+              {{ top5_cpu.stdout | default('N/A') }}
+              
+              === System Load ===
+              {{ uptime_info.stdout | default('N/A') }}
