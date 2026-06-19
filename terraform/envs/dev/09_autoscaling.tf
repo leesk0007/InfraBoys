@@ -151,7 +151,28 @@ module "asg" {
         depends_on:
           - nginx
         restart: always
+
+      process_exporter:
+        image: ncabatoff/process-exporter:latest
+        container_name: process-exporter
+        ports:
+          - "9256:9256"
+        pid: host
+        volumes:
+          - /proc:/host/proc:ro
+          - ./process-exporter.yml:/config/process-exporter.yml:ro
+        command:
+          - '--procfs=/host/proc'
+          - '--config.path=/config/process-exporter.yml'
+        restart: always
     COMPOSE
+
+    cat <<'PROCEXP' > process-exporter.yml
+    process_names:
+      - name: "{{.Comm}}"
+        cmdline:
+          - '.+'
+    PROCEXP
 
     chown -R ec2-user:ec2-user /home/ec2-user/app
     docker compose up -d
