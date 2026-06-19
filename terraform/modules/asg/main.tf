@@ -37,8 +37,7 @@ resource "aws_launch_template" "lt" {
   }
   lifecycle {
     ignore_changes = [
-      image_id,
-      user_data
+      image_id
     ]
   }
 }
