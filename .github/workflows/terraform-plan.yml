@@ -3,7 +3,7 @@ name: Terraform Plan & Scan
 on:
   pull_request:
     paths:
-      - 'terraform/**'
+      - "terraform/**"
   workflow_dispatch:
 
 permissions:
@@ -16,8 +16,8 @@ jobs:
     env:
       INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
       TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
-      TF_VAR_db_user:            ${{ secrets.DB_USER }}
-      TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
+      TF_VAR_db_user: ${{ secrets.DB_USER }}
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
 
     defaults:
       run:
@@ -38,10 +38,10 @@ jobs:
       - name: Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'config'
-          scan-ref: 'terraform'
-          format: 'json'
-          output: '${{ github.workspace }}/trivy-report.json' 
+          scan-type: "config"
+          scan-ref: "terraform"
+          format: "json"
+          output: "${{ github.workspace }}/trivy-report.json"
           hide-progress: true
 
       - name: Terraform Validate
@@ -138,23 +138,23 @@ jobs:
             const fs = require('fs');
             const plan = fs.readFileSync('terraform/envs/dev/plan-output.txt', 'utf8');
             const cost = fs.readFileSync('terraform/envs/dev/infracost-report.txt', 'utf8');
-            
+
             const output = `## 🔍 인프라 변경 사전 검증 리포트
-            
+
             ### 💵 Infracost 예상 비용
             \`\`\`text
             ${cost}
             \`\`\`
-            
+
             ### 🏗️ Terraform Plan 상세 내역
             <details><summary>Plan 결과 펼쳐보기</summary>
-            
+
             \`\`\`text
             ${plan}
             \`\`\`
-            
+
             </details>`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

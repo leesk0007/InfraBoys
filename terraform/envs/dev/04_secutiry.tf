@@ -69,6 +69,22 @@ module "project02_was_sg" {
       protocol    = "tcp"
       cidr_blocks = ["10.0.0.0/16", "100.64.0.0/10"]
       description = "Prometheus Node Exporter access from internal VPC and Tailscale"
+    },
+    # 4. 웹 서버 모니터링을 위한 Prometheus Nginx Exporter(9113) 접근을 허용합니다.
+    {
+      from_port   = 9113
+      to_port     = 9113
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16", "100.64.0.0/10"]
+      description = "Prometheus Nginx Exporter access from internal VPC and Tailscale"
+    },
+    # 5. 프로세스 모니터링을 위한 Prometheus Process Exporter(9256) 접근을 허용합니다.
+    {
+      from_port   = 9256
+      to_port     = 9256
+      protocol    = "tcp"
+      cidr_blocks = ["10.0.0.0/16", "100.64.0.0/10"]
+      description = "Prometheus Process Exporter access from internal VPC and Tailscale"
     }
   ]
   egress_rules = [
