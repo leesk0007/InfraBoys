@@ -82,3 +82,22 @@ data "aws_instances" "asg_nodes" {
   # 지금 바로 접속해서 일할 수 있는 'running' 상태인 애들만 쏙 골라냅니다.
   instance_state_names = ["running"]
 }
+
+# 8. 동적 스케일링 정책 (수동 스케일링을 위해 비활성화)
+# CPU 사용률이 낮을 때 자동으로 Scale In 되는 것을 방지하기 위해 주석 처리
+/*
+resource "aws_autoscaling_policy" "cpu_scaling_policy" {
+  name = "cpu-target-tracking"
+  autoscaling_group_name = aws_autoscaling_group.asg.name
+  policy_type = "TargetTrackingScaling"  
+  
+  estimated_instance_warmup = 60
+
+  target_tracking_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ASGAverageCPUUtilization"
+    }
+    target_value = 30	
+  }
+}
+*/
