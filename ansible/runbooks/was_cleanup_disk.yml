@@ -1,0 +1,43 @@
+---
+- name: "AIOps: Disk Space Cleanup Action"
+  hosts: all
+  gather_facts: no
+  become: true
+  
+  vars:
+    journal_retention: "7d"         # journalctl 보관 기간
+  
+  tasks:
+    - block:
+        # ───── 조치 1: journalctl 로그 정리 ─────
+        - name: "조치 1: systemd journal 로그 정리 ({{ journal_retention }} 이전 삭제)"
+          command: "journalctl --vacuum-time={{ journal_retention }}"
+          register: journal_result
+          changed_when: journal_result.rc == 0
+
+        - name: "journalctl 정리 결과"
+          debug:
+            msg: "{{ journal_result.stdout_lines | default(['(출력 없음)']) }}"
+
+        # ───── 조치 2: logrotate 강제 실행 ─────
+        - name: "조치 2: logrotate 강제 실행"
+          command: "logrotate -f /etc/logrotate.conf"
+          register: logrotate_result
+          changed_when: logrotate_result.rc == 0
+
+        - name: "logrotate 실행 결과"
+          debug:
+            msg: "logrotate 강제 실행 완료 (rc={{ logrotate_result.rc }})"
+
+        # ───── 결과 보고 ─────
+        - name: "결과 보고: 성공"
+          debug:
+            msg: "✅ [SUCCESS] {{ inventory_hostname }} Disk cleanup actions completed."
+
+      rescue:
+        - name: "결과 보고: 실패"
+          fail:
+            msg: |
+              ❌ [FAILURE] {{ inventory_hostname }} Disk cleanup failed!
+              - journalctl rc: {{ journal_result.rc | default('N/A') }}
+              - logrotate  rc: {{ logrotate_result.rc | default('N/A') }}
