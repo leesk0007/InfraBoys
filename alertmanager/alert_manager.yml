@@ -12,13 +12,13 @@ global:
 # ============================================
 route:
   # /prometheus/alert_rules에 alert_rules파일에 정의되어있는 태그로 분류
-  group_by: ['alertname', 'severity']
+  group_by: ['action']
   
   # 첫 알람 발생 후 그룹화 위해 대기하는 시간
   group_wait: 30s
 
   # 같은 알람이 계속 발생할 때 재전송 간격
-  repeat_interval: 30s
+  repeat_interval: 15m
   
   # 기본 receiver (어디서도 매칭 안 되면 여기로)
   receiver: 'discord-webhook'
@@ -40,22 +40,21 @@ route:
         action: scale_out        
       receiver: scale-out-webhook
 
-    - match:           
-        severity: critical        
-      receiver: troubleshoot-webhook
+    - match_re:
+        action: "Aiops_.*"
+      receiver: aiops-webhook
 
-# aiops 부분 routes 추후에 적어야함
 
-# ============================================
+#============================================
 # Receiver 정의 - 알람을 받는 대상
-# ============================================
+#============================================
 receivers:
   # =========================
   # aiops api 활용을 위한 부분
   # =========================
   - name: 'troubleshoot-webhook'
     webhook_configs:
-      - url: 'http://fastapi:8001/webhook/troubleshoot'
+      - url: 'http://fastapi:8000/webhook/troubleshoot'
         # 알람 해결됐을 때도 알림 보낼지
         send_resolved: true
         max_alerts: 0  # 0 = 제한 없음
@@ -73,13 +72,19 @@ receivers:
           
   - name: 'scale-out-webhook'
     webhook_configs:
-      - url: 'http://fastapi:8001/webhook/scale-out'
+      - url: 'http://fastapi:8000/webhook/scale-out'
         send_resolved: true
 
   - name: 'scale-in-webhook'
     webhook_configs:
-      - url: 'http://fastapi:8001/webhook/scale-in'
+      - url: 'http://fastapi:8000/webhook/scale-in'
         send_resolved: true
+
+  - name: 'aiops-webhook'
+    webhook_configs:
+      - url: 'http://fastapi:8000/aiops/troubleshoot'
+        send_resolved: true
+    
 
 
 

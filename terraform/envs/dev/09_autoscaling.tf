@@ -9,7 +9,7 @@
 
 module "asg" {
   source = "../../modules/asg"
-
+  
   ami_id = data.aws_ami.project02_was.id
 
   asg_name = "project02-asg"

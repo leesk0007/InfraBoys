@@ -25,7 +25,7 @@ services:
       - '--web.enable-lifecycle'
 
     networks:
-      - monitoring
+      - project2-network
     environment:
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY
@@ -40,7 +40,7 @@ services:
     container_name: alert_manager
     restart: unless-stopped
     networks:
-      - monitoring
+      - project2-network
     ports:
     - "9093:9093" 
     volumes:
@@ -62,7 +62,7 @@ services:
     container_name: grafana
     restart: unless-stopped
     networks:
-      - monitoring
+      - project2-network
     ports:
     - "3000:3000"
     volumes:
@@ -73,7 +73,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWD=admin 
       - GF_INSTALL_PLUGINS=marcusolsson-dynamictext-panel 
       - GF_PANELS_DISABLE_SANITIZE_HTML=true
-      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/grafana_dashboard.json
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/infra_boys.json
 
   # -----------------------------
   # grafana, cicd fastapi
@@ -82,7 +82,7 @@ services:
     build: ./fastapi
     container_name: fastapi
     ports:
-      - "8001:8001"
+      - "8001:8000"
     volumes:
       - ./fastapi/src:/app
       - ./keys:/app/keys:ro
@@ -90,32 +90,32 @@ services:
       - ./fastapi/.env
     restart: unless-stopped
     networks:
-      - monitoring
       - project2-network
+
   # -------------------------------------------------
   # Management Runner
   # Terraform / Ansible 실행 환경
   # -------------------------------------------------
-  mgmt-runner:
+  # mgmt-runner:
 
-    build:
-      context: ./management/runner
+  #   build:
+  #     context: ./management/runner
 
-    container_name: mgmt-runner
+  #   container_name: mgmt-runner
 
-    tty: true
-    stdin_open: true
+  #   tty: true
+  #   stdin_open: true
 
-    volumes:
+  #   volumes:
 
-      # Terraform 코드
-      - ./terraform:/workspace/terraform
+  #     # Terraform 코드
+  #     - ./terraform:/workspace/terraform
 
-      # Ansible 코드
-      - ./ansible:/workspace/ansible
+  #     # Ansible 코드
+  #     - ./ansible:/workspace/ansible
 
-      # 배포 대상 코드
-      - ./web:/workspace/web
+  #     # 배포 대상 코드
+  #     - ./web:/workspace/web
 
     environment:
       - AWS_ACCESS_KEY_ID
@@ -127,10 +127,10 @@ services:
       - INFRACOST_API_KEY
       - DISCORD_WEBHOOK_URL
 
-    restart: unless-stopped
+  #   restart: unless-stopped
 
-    networks:
-      - project2-network
+  #   networks:
+  #     - project2-network
 
 # -------------------------------------------------
 # Docker Named Volume

@@ -12,8 +12,8 @@ data "aws_ami" "project02_was" {
   most_recent = true
   owners      = ["self"]
 
-  filter {
-    name   = "name"
-    values = ["project02-was-*"]
-  }
+  # filter {
+  #   name   = "name"
+  #   values = ["project02-was-*"]
+  # }
 }
