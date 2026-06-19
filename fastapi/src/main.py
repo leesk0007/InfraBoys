@@ -255,7 +255,14 @@ async def troubleshoot(request: Request):
     print("-"*50)
 
     print("① 로그 수집 중...")
-    raw_logs = data_handler.get_local_logs()
+    
+    # Extract target_ip from instance label
+    target_ip = instances.split(",")[0].split(":")[0].strip() if instances else None
+    
+    if target_ip and target_ip != "unknown":
+        raw_logs = await data_handler.get_logs_on_demand(target_ip, container_name="app-app-1")
+    else:
+        raw_logs = "IP 정보를 찾을 수 없습니다."
 
     print("② 마스킹 중...")
     masked_logs = analyzer.mask_pii(raw_logs)

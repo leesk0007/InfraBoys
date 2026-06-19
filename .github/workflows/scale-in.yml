@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       require_ec2:
-        description: '축소할 EC2 인스턴스 수'
+        description: "축소할 EC2 인스턴스 수"
         required: true
-        default: '1'
+        default: "1"
       sender:
-        description: '발송 주체'
+        description: "발송 주체"
         required: true
-        default: 'grafana'
+        default: "grafana"
         type: choice
         options:
           - grafana
@@ -26,11 +26,11 @@ jobs:
   scale_in_job:
     runs-on: self-hosted
     timeout-minutes: 60
-    
+
     env:
       TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
-      TF_VAR_db_user:            ${{ secrets.DB_USER }}
-      TF_VAR_db_password:        ${{ secrets.DB_PASSWORD }}
+      TF_VAR_db_user: ${{ secrets.DB_USER }}
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
 
     steps:
       - name: Parse Inputs
@@ -39,9 +39,9 @@ jobs:
           # repository_dispatch 또는 workflow_dispatch에서 데이터 추출
           REQUIRE_EC2="${{ github.event.client_payload.require_ec2 || github.event.inputs.require_ec2 }}"
           SENDER="${{ github.event.client_payload.sender || github.event.inputs.sender || github.actor }}"
-          
+
           if [ -z "$REQUIRE_EC2" ]; then REQUIRE_EC2="1"; fi
-          
+
           echo "require_ec2=$REQUIRE_EC2" >> $GITHUB_OUTPUT
           echo "sender=$SENDER" >> $GITHUB_OUTPUT
           echo "=== 📥 Scale-In Request ==="
@@ -58,7 +58,7 @@ jobs:
             
           TARGET=$((CURRENT - ${{ steps.parse.outputs.require_ec2 }}))
           if [ "$TARGET" -lt 1 ]; then TARGET=1; fi
-          
+
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "target=$TARGET" >> $GITHUB_OUTPUT
           echo "Current: $CURRENT -> Target: $TARGET"
