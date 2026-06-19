@@ -104,28 +104,4 @@ data "aws_instances" "asg_nodes" {
   # 지금 바로 접속해서 일할 수 있는 'running' 상태인 애들만 쏙 골라냅니다.
   instance_state_names = ["running"]
 }
-
-# 8. 동적 스케일링 정책
-resource "aws_autoscaling_policy" "cpu_scaling_policy" {
-  name = "cpu-target-tracking"
-  # 대상 추적 방식 : 특정 지표를 정해진 수치로 유지하도록 aws 알아서 조종
-  autoscaling_group_name = aws_autoscaling_group.asg.name
-  # 대상 추적 설정
-  policy_type = "TargetTrackingScaling"  
-  
-  estimated_instance_warmup = 60
-
-  target_tracking_configuration {
-    # 무엇을 기준으로 추적할것인가?
-    predefined_metric_specification {
-      # asg 그룹 내의 모든 인스턴스의 cpu 사용 평균값
-      predefined_metric_type = "ASGAverageCPUUtilization"
-    }
-    # 기준이 되는 사용률 50% (테스트를 위해낮게 잡음)
-    # 50%를 넘어가면 -> scale out -> ec2 개수가 늘어남 (max 까지)
-    # 50% 아래로 떨어지면 -> scale in -> ec2 개수가 줄어듬 (min까지)
-    #target_value = 50
-	target_value = 30	
-  }
-
-}
+
