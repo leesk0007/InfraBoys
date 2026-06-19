@@ -1,7 +1,6 @@
 name: "Incident Response"
 
 on:
-  # 1) 수동 실행 (UI에서)
   workflow_dispatch:
     inputs:
       target_ip:
@@ -22,10 +21,12 @@ on:
         required: false
         default: ""
 
-  # 2) 외부 API 호출 (repository_dispatch)
   repository_dispatch:
     types:
       - incident-response
+
+env:
+  PLAYBOOK_DIR: "ansible/runbooks"
 
 jobs:
   test-connection:
@@ -35,9 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ───── 트리거 종류에 따라 입력값 통합 ─────
       - name: Resolve Inputs
-        id: inputs
         run: |
           if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             echo "TARGET_IP=${{ github.event.client_payload.target_ip }}" >> $GITHUB_ENV
@@ -55,7 +54,7 @@ jobs:
         run: |
           echo "🔔 Trigger    : $TRIGGER"
           echo "🎯 Target IP  : $TARGET_IP"
-          echo "📜 Playbook   : $PLAYBOOK"
+          echo "📜 Playbook   : $PLAYBOOK_DIR/$PLAYBOOK"
           echo "🔢 PID        : ${PID_INPUT:-(none)}"
 
       - name: Validate Inputs
@@ -66,6 +65,10 @@ jobs:
           fi
           if [ -z "$PLAYBOOK" ]; then
             echo "❌ playbook이 비어있습니다."
+            exit 1
+          fi
+          if [ ! -f "$PLAYBOOK_DIR/$PLAYBOOK" ]; then
+            echo "❌ 플레이북 파일이 존재하지 않습니다: $PLAYBOOK_DIR/$PLAYBOOK"
             exit 1
           fi
           if [ "$PLAYBOOK" = "kill_process.yml" ] && [ -z "$PID_INPUT" ]; then
@@ -89,7 +92,7 @@ jobs:
           fi
 
           ansible-playbook -i "${TARGET_IP}," \
-            "$PLAYBOOK" \
+            "$PLAYBOOK_DIR/$PLAYBOOK" \
             -u ec2-user \
             --private-key ~/.ssh/ansible_test_key \
             $EXTRA_ARGS
