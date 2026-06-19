@@ -7,7 +7,6 @@ variable "name" {
 variable "tailscale_auth_key" {
   description = "Tailscale Auth Key for Subnet Router"
   type        = string
-  default     = "tskey-auth-kMuiLQMMDg11CNTRL-NvgFrgcgqVEotkvAMpWTVE6qxzxbipno2"
 }
 
 variable "subnet_id" {

@@ -70,7 +70,6 @@ module "project02_db_ec2" {
 
     until docker info >/dev/null 2>&1; do sleep 1; done
 
-<<<<<<< HEAD
     # EBS 볼륨 마운트 (데이터 영속성)
     DEVICE=/dev/nvme1n1
     MOUNT_POINT=/data/postgres
@@ -82,8 +81,6 @@ module "project02_db_ec2" {
     mount $DEVICE $MOUNT_POINT
     echo "$DEVICE $MOUNT_POINT xfs defaults 0 0" >> /etc/fstab
 
-=======
->>>>>>> feature/1/monitoring
     aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 644724502235.dkr.ecr.ap-northeast-2.amazonaws.com
 
     # 컨테이너 간 통신용 네트워크
