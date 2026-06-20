@@ -116,6 +116,7 @@ groups:
         labels:
           action: Aiops_nginx_restart
           case: "nginx_down"
+          severity: "critical"
         annotations:
           summary: "Nginx 프로세스 종료 감지"
           log_keyword: "Main process exited"
@@ -127,6 +128,7 @@ groups:
         labels:
           action: Aiops_disk_cleanup
           case: "disk_full"
+          severity: "critical"
         annotations:
           summary: "디스크 사용률 95% 초과"
           log_keyword: "No space left on device"
@@ -138,6 +140,7 @@ groups:
         labels:
           action: Aiops_kill_process
           case: "zombie_process"
+          severity: "critical"
         annotations:
           summary: "좀비 프로세스 감지 ({{ $labels.groupname }})"
 
@@ -152,6 +155,7 @@ groups:
         labels:
           action: Aiops_kill_idle_connections
           case: "db_connection_full"
+          severity: "critical"
         annotations:
           summary: "PostgreSQL 커넥션 20% 이상 사용"
           log_keyword: "too many connections"
@@ -163,6 +167,7 @@ groups:
         labels:
           action: Aiops_db_restart
           case: "db_down"
+          severity: "critical"
         annotations:
           summary: "PostgreSQL 프로세스 다운"
           log_keyword: "Connection refused"
