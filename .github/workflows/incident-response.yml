@@ -71,10 +71,6 @@ jobs:
             echo "❌ 플레이북 파일이 존재하지 않습니다: $PLAYBOOK_DIR/$PLAYBOOK"
             exit 1
           fi
-          if [ "$PLAYBOOK" = "kill_process.yml" ] && [ -z "$PID_INPUT" ]; then
-            echo "❌ kill_process.yml 실행 시 PID는 필수입니다."
-            exit 1
-          fi
 
       - name: Setup SSH Key
         run: |
@@ -87,7 +83,7 @@ jobs:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           EXTRA_ARGS=""
-          if [ "$PLAYBOOK" = "kill_process.yml" ]; then
+          if [ "$PLAYBOOK" = "was_kill_process.yml" ] && [ -n "$PID_INPUT" ]; then
             EXTRA_ARGS="-e pid=$PID_INPUT"
           fi
 
