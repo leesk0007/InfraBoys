@@ -48,6 +48,10 @@ scrape_configs:
         target_label: __address__
         replacement: "${1}:9100"
       
+      # Grafana 대시보드 호환성을 위해 instance 라벨을 IP로 고정 (포트 번호 제거)
+      - source_labels: [__meta_ec2_private_ip]
+        target_label: instance
+      
       # EC2의 네임 태그 확인
       - source_labels: [__meta_ec2_tag_Name]
         target_label: instance_name
@@ -67,6 +71,8 @@ scrape_configs:
     - source_labels: [__meta_ec2_private_ip]
       target_label: __address__
       replacement: "${1}:9113"
+    - source_labels: [__meta_ec2_private_ip]
+      target_label: instance
     - source_labels: [__meta_ec2_tag_Name]
       target_label: instance_name
 
@@ -85,6 +91,8 @@ scrape_configs:
     - source_labels: [__meta_ec2_private_ip]
       target_label: __address__
       replacement: "${1}:9256"
+    - source_labels: [__meta_ec2_private_ip]
+      target_label: instance
     - source_labels: [__meta_ec2_tag_Name]
       target_label: instance_name
       
@@ -103,5 +111,7 @@ scrape_configs:
     - source_labels: [__meta_ec2_private_ip]
       target_label: __address__
       replacement: "${1}:9187"
+    - source_labels: [__meta_ec2_private_ip]
+      target_label: instance
     - source_labels: [__meta_ec2_tag_Name]
       target_label: instance_name
