@@ -28,6 +28,17 @@ jobs:
       - name: Terraform Init
         run: terraform init -upgrade
 
+      - name: Import Existing EBS Volume
+        run: |
+          # 기존에 남아있는 DB 볼륨을 찾아 Terraform 상태로 다시 가져옴(Import)
+          VOLUME_ID=$(aws ec2 describe-volumes --filters Name=tag:Name,Values=project02-db-data --query "Volumes[0].VolumeId" --output text --region ap-northeast-2)
+          if [ "$VOLUME_ID" != "None" ] && [ "$VOLUME_ID" != "" ]; then
+            echo "Found existing volume $VOLUME_ID, importing to state..."
+            terraform import aws_ebs_volume.db_data $VOLUME_ID || true
+          else
+            echo "No existing volume found."
+          fi
+
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 

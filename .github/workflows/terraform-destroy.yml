@@ -24,7 +24,10 @@ jobs:
         run: terraform init -upgrade
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        run: |
+          # EBS 볼륨은 실제 AWS에서 삭제되지 않도록 Terraform 상태에서 제외
+          terraform state rm aws_ebs_volume.db_data || true
+          terraform destroy -auto-approve
 
       - name: Send Destroy Success Notification
         if: success()
