@@ -16,10 +16,10 @@ module "asg" {
 
   instance_type = "t3.micro"
 
-  # 최소 1대를 유지하고, 최대 7대까지 자동으로 늘어납니다.
+  # 최소 1대를 유지하고, 최대 8대까지 자동으로 늘어납니다.
   desired_capacity = var.desired_capacity
-  min_size         = 2
-  max_size         = 7
+  min_size         = 1
+  max_size         = 8
 
   # 인스턴스가 생성될 프라이빗 서브넷 위치 (AZ-a 단일 구성)
   subnet_ids = [
