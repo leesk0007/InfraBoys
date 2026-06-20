@@ -13,14 +13,14 @@ groups:
         expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100
 
       - record: future_average_cpu
-        expr: predict_linear(present_average_cpu[30m:], 5 * 60)
+        expr: predict_linear(present_average_cpu[30m:], 10 * 60)
 
       # memory
       - record: present_average_memory
         expr: avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)
 
       - record: future_average_memory
-        expr: predict_linear(present_average_memory[30m:], 5 * 60)
+        expr: predict_linear(present_average_memory[30m:], 10 * 60)
 
   # ============================================================
   #  예측 + 현재값 알람 (현재값 OR 5분 후 예측값)
@@ -61,9 +61,9 @@ groups:
       # ---------- LEVEL 2: 60 < x <= 75 ----------
       - alert: Level2-cpu
         expr: |
-          (present_average_cpu > 60 and present_average_cpu <= 75)
+          (present_average_cpu > 60)
           or
-          (future_average_cpu  > 60 and future_average_cpu  <= 75)
+          (future_average_cpu  > 60)
         for: 3m
         labels:
           level: "2"
@@ -71,9 +71,9 @@ groups:
 
       - alert: Level2-memory
         expr: |
-          (present_average_memory > 85 and present_average_memory <= 95)
+          (present_average_memory > 85)
           or
-          (future_average_memory  > 85 and future_average_memory  <= 95)
+          (future_average_memory  > 85)
         for: 3m
         labels:
           level: "2"
@@ -96,9 +96,9 @@ groups:
 
       - alert: Normalized-memory
         expr: |
-          (present_average_memory <= 50)
+          (present_average_memory <= 60)
           and
-          (future_average_memory  <= 50)
+          (future_average_memory  <= 60)
         for: 5m
         labels:
           action: scale_in
