@@ -88,7 +88,8 @@ async def get_logs_on_demand(target_ip: str, container_name: str = "fastapi") ->
             target_ip, 
             username=config.SSH_USER, 
             client_keys=[config.SSH_KEY_PATH],
-            known_hosts=None # 내부망이므로 known_hosts 무시
+            known_hosts=None, # 내부망이므로 known_hosts 무시
+            login_timeout=5   # 타임아웃 5초 설정
         ) as conn:
             # 최근 5분, 최대 300줄 추출
             cmd = f"docker logs --since 5m --tail 300 {container_name}"

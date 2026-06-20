@@ -1,68 +1,111 @@
 ---
-- name: "AIOps: Abnormal CPU Process Termination"
+- name: "AIOps: Zombie / Abnormal Process Auto-Kill"
   hosts: all
   gather_facts: yes
-  become: true  # 다른 사용자 프로세스 종료를 위해 root 권한 필요
-  
+  become: true
+
   vars:
-    target_pid: "{{ pid }}"           # 외부에서 전달받는 PID (extra-vars)
-    sigterm_wait_seconds: 30          # SIGTERM 후 SIGKILL까지 대기 시간
+    # 외부에서 PID를 전달받으면 해당 PID만 종료, 전달 안 되면 자동 탐지
+    target_pid: "{{ pid | default('') }}"
+    sigterm_wait_seconds: 10
 
   tasks:
-    - name: "사전 검증: PID 파라미터 전달 여부 확인"
-      fail:
-        msg: "target PID가 전달되지 않았습니다. -e pid=<PID> 형태로 전달해주세요."
-      when: target_pid is not defined or target_pid | length == 0
-
-    - name: "사전 검증: 대상 프로세스 존재 여부 및 정보 수집"
-      shell: "ps -p {{ target_pid }} -o pid,pcpu,user,comm,args --no-headers"
-      register: proc_info
+    # ═══════════════════════════════════════════
+    # Phase 1: 대상 PID 결정 (자동 탐지 또는 수동 지정)
+    # ═══════════════════════════════════════════
+    - name: "자동 탐지: 좀비(Defunct) 프로세스 목록 수집"
+      shell: "ps -eo state,pid --no-headers | awk '$1==\"Z\" {print $2}'"
+      register: zombie_pids
       changed_when: false
-      failed_when: proc_info.rc != 0
+      when: target_pid | length == 0
+
+    - name: "자동 탐지: 좀비 프로세스의 부모(PPID) 수집"
+      shell: "ps -eo state,pid,ppid --no-headers | awk '$1==\"Z\" {print $3}' | sort -u"
+      register: zombie_ppids
+      changed_when: false
+      when: target_pid | length == 0
+
+    - name: "대상 PID 목록 결정"
+      set_fact:
+        kill_targets: >-
+          {{
+            (target_pid | length > 0)
+            | ternary(
+                [target_pid],
+                ((zombie_ppids.stdout_lines | default([])) + (zombie_pids.stdout_lines | default([]))) | unique
+              )
+          }}
+
+    - name: "탐지 결과 출력"
+      debug:
+        msg: >-
+          {{ (target_pid | length > 0)
+             | ternary(
+                 '🎯 수동 지정 PID: ' ~ target_pid,
+                 '🔍 자동 탐지된 좀비 PID: ' ~ (zombie_pids.stdout_lines | default([]) | join(', ') | default('없음'))
+                 ~ ' / 부모 PPID: ' ~ (zombie_ppids.stdout_lines | default([]) | join(', ') | default('없음'))
+               )
+          }}
+
+    - name: "대상 프로세스가 없으면 종료"
+      debug:
+        msg: "✅ 좀비 프로세스가 없습니다. 조치가 필요하지 않습니다."
+      when: kill_targets | length == 0
+
+    - name: "메타 종료"
+      meta: end_play
+      when: kill_targets | length == 0
+
+    # ═══════════════════════════════════════════
+    # Phase 2: 프로세스 종료 (SIGTERM → SIGKILL)
+    # ═══════════════════════════════════════════
+    - name: "대상 프로세스 상세 정보 수집"
+      shell: "ps -p {{ item }} -o pid,ppid,state,pcpu,user,comm,args --no-headers 2>/dev/null || echo '(already gone)'"
+      loop: "{{ kill_targets }}"
+      register: proc_info_results
+      changed_when: false
 
     - name: "대상 프로세스 정보 출력"
       debug:
-        msg: "🎯 [TARGET] {{ proc_info.stdout }}"
+        msg: "🎯 [TARGET] {{ item.stdout }}"
+      loop: "{{ proc_info_results.results }}"
+      when: item.stdout is defined
 
     - block:
-        # ───── 1단계: SIGTERM (Graceful Shutdown) ─────
-        - name: "조치 1: SIGTERM 전송 (PID {{ target_pid }})"
-          command: "kill -SIGTERM {{ target_pid }}"
+        # ── 1단계: SIGTERM ──
+        - name: "조치 1: SIGTERM 전송"
+          command: "kill -SIGTERM {{ item }}"
+          loop: "{{ kill_targets }}"
           register: sigterm_result
-          changed_when: sigterm_result.rc == 0
+          ignore_errors: yes
 
         - name: "Graceful Shutdown 대기 ({{ sigterm_wait_seconds }}초)"
           pause:
             seconds: "{{ sigterm_wait_seconds }}"
 
-        # ───── 2단계: 종료 여부 확인 ─────
-        - name: "검증: SIGTERM 후 프로세스 종료 여부 확인"
-          shell: "ps -p {{ target_pid }} -o pid= || true"
-          register: pid_check
+        # ── 2단계: 생존 확인 후 SIGKILL ──
+        - name: "검증: SIGTERM 후 생존 프로세스 확인"
+          shell: "ps -p {{ item }} -o pid= 2>/dev/null || true"
+          loop: "{{ kill_targets }}"
+          register: pid_checks
           changed_when: false
 
-        - name: "종료 방식 기록"
-          set_fact:
-            kill_method: "{{ 'SIGTERM (graceful)' if pid_check.stdout | trim == '' else 'SIGKILL (forced)' }}"
-
-        # ───── 3단계: SIGKILL (필요 시) ─────
-        - name: "조치 2: SIGKILL 전송 (SIGTERM 미응답 시)"
-          command: "kill -SIGKILL {{ target_pid }}"
-          when: pid_check.stdout | trim != ""
-          register: sigkill_result
-          changed_when: sigkill_result.rc == 0
+        - name: "조치 2: SIGKILL 전송 (SIGTERM 미응답 프로세스)"
+          command: "kill -SIGKILL {{ item.item }}"
+          loop: "{{ pid_checks.results }}"
+          when: item.stdout | trim != ""
+          ignore_errors: yes
 
         - name: "SIGKILL 후 안정화 대기"
           pause:
             seconds: 3
-          when: pid_check.stdout | trim != ""
+          when: pid_checks.results | selectattr('stdout', 'match', '\\S') | list | length > 0
 
-        # ───── 최종 검증 ─────
-        - name: "최종 검증: 프로세스 완전 종료 확인"
-          shell: "ps -p {{ target_pid }} -o pid= || true"
-          register: pid_final_check
+        # ── 3단계: 최종 검증 ──
+        - name: "최종 검증: 좀비 프로세스 잔존 여부"
+          shell: "ps -eo state --no-headers | grep -c '^Z' || true"
+          register: zombie_count_final
           changed_when: false
-          failed_when: pid_final_check.stdout | trim != ""
 
         - name: "시스템 부하 평균 확인"
           shell: "uptime | awk -F'load average:' '{print $2}'"
@@ -72,10 +115,10 @@
         - name: "결과 보고: 성공"
           debug:
             msg: |
-              ✅ [SUCCESS] {{ inventory_hostname }} Process terminated.
-              - PID     : {{ target_pid }}
-              - Method  : {{ kill_method }}
-              - Load Avg: {{ load_avg.stdout | trim }}
+              ✅ [SUCCESS] {{ inventory_hostname }} 프로세스 정리 완료
+              - 처리 PID  : {{ kill_targets | join(', ') }}
+              - 잔여 좀비  : {{ zombie_count_final.stdout | trim }}개
+              - Load Avg  : {{ load_avg.stdout | trim }}
 
       rescue:
         - name: "현재 CPU Top 5 프로세스 수집"
@@ -90,25 +133,16 @@
           changed_when: false
           ignore_errors: yes
 
-        - name: "대상 프로세스 잔존 여부 재확인"
-          shell: "ps -p {{ target_pid }} -o pid,pcpu,pmem,user,comm,args --no-headers || echo 'Process not found'"
-          register: proc_detail
-          changed_when: false
-          ignore_errors: yes
-
         - name: "결과 보고: 실패"
           fail:
             msg: |
-              ❌ [FAILURE] {{ inventory_hostname }} Process termination failed!
-              
-              === Target PID ===
-              {{ target_pid }}
-              
-              === Process Status ===
-              {{ proc_detail.stdout | default('N/A') }}
-              
+              ❌ [FAILURE] {{ inventory_hostname }} 프로세스 종료 실패!
+
+              === 대상 PID ===
+              {{ kill_targets | join(', ') }}
+
               === Top 5 CPU Processes ===
               {{ top5_cpu.stdout | default('N/A') }}
-              
+
               === System Load ===
               {{ uptime_info.stdout | default('N/A') }}

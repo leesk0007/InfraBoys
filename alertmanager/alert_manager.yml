@@ -82,7 +82,7 @@ receivers:
 
   - name: 'aiops-webhook'
     webhook_configs:
-      - url: 'http://fastapi:8000/aiops/troubleshoot'
+      - url: 'http://fastapi:8000/webhook/troubleshoot'
         send_resolved: true
     
 

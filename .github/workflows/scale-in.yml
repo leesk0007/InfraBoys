@@ -71,6 +71,7 @@ jobs:
         run: terraform init
 
       - name: Apply Scale In
+        if: ${{ steps.current.outputs.current != steps.current.outputs.target }}
         working-directory: terraform/envs/dev
         run: |
           terraform apply -auto-approve \
@@ -78,7 +79,7 @@ jobs:
             -var="desired_capacity=${{ steps.current.outputs.target }}"
 
       - name: Send Notification (Grafana)
-        if: ${{ steps.parse.outputs.sender == 'grafana' }}
+        if: ${{ steps.parse.outputs.sender == 'grafana' && steps.current.outputs.current != steps.current.outputs.target }}
         run: |
           MESSAGE="🚨 [그라파나 즉시 스케일 인 실행]
           - 발송자: ${{ steps.parse.outputs.sender }}
@@ -87,7 +88,7 @@ jobs:
           curl -s -H "Content-Type: application/json" -X POST -d @discord-payload.json "${{ secrets.DISCORD_WEBHOOK_URL }}"
 
       - name: Send Notification (Alertmanager)
-        if: ${{ steps.parse.outputs.sender == 'alertmanager' }}
+        if: ${{ steps.parse.outputs.sender == 'alertmanager' && steps.current.outputs.current != steps.current.outputs.target }}
         run: |
           MESSAGE="📉 [프로메테우스 예측기반 스케일 인 실행]
           - 발송자: ${{ steps.parse.outputs.sender }}
