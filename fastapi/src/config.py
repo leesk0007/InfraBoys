@@ -174,6 +174,7 @@ async def trigger_github_action(event_type: str, payload: dict):
 # 런북 → GitHub Actions 매핑 (라우팅)
 # ============================================
 RUNBOOK_ACTION_MAP = {
+    # 기존 런북
     "runbook-scale-out.yml": {
         "event_type": "scale-out",  # predictive-scaling.yml 을 트리거함
         "payload": {
@@ -192,5 +193,31 @@ RUNBOOK_ACTION_MAP = {
         "event_type": "app-rollback",
         "payload": {"sender": "AIOps Discord Bot"},
         "description": "이전 버전 애플리케이션 롤백"
+    },
+    # AIOps 장애 전용 런북 추가
+    "was_restart_nginx.yml": {
+        "event_type": "incident-response",
+        "payload": {"playbook": "was_restart_nginx.yml", "sender": "AIOps Discord Bot"},
+        "description": "Nginx 프로세스 재시작"
+    },
+    "was_cleanup_disk.yml": {
+        "event_type": "incident-response",
+        "payload": {"playbook": "was_cleanup_disk.yml", "sender": "AIOps Discord Bot"},
+        "description": "디스크 임시 파일 정리"
+    },
+    "was_kill_process.yml": {
+        "event_type": "incident-response",
+        "payload": {"playbook": "was_kill_process.yml", "sender": "AIOps Discord Bot"},
+        "description": "고부하/좀비 프로세스 강제 종료"
+    },
+    "db_kill_idle_connections.yml": {
+        "event_type": "incident-response",
+        "payload": {"playbook": "db_kill_idle_connections.yml", "sender": "AIOps Discord Bot"},
+        "description": "PostgreSQL Idle 커넥션 풀 강제 정리"
+    },
+    "db_restart_container.yml": {
+        "event_type": "incident-response",
+        "payload": {"playbook": "db_restart_container.yml", "sender": "AIOps Discord Bot"},
+        "description": "PostgreSQL DB 컨테이너 재시작"
     }
 }

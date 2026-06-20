@@ -277,6 +277,13 @@ async def webhook_scale_in(request: Request):
 # =============================================
 # AIOps Webhook — troubleshoot 엔드포인트
 # =============================================
+# [AIOps 5가지 장애 대응 동작 흐름]
+# 1. Prometheus: 5가지 장애(Nginx 다운, 디스크 풀, 좀비 프로세스, DB 다운, DB 커넥션 풀) 감지 시 Alertmanager로 알람 전송
+# 2. Alertmanager: `action="Aiops_.*"` 꼬리표를 확인하고 이 엔드포인트(/webhook/troubleshoot)로 POST 웹훅 전송
+# 3. FastAPI: 에러가 발생한 대상 서버(target_ip)의 최근 에러 로그를 수집하고 개인정보(PII)를 마스킹 처리
+# 4. Gemini AI: 로그와 알람 내역을 바탕으로 장애 원인을 분석하고 '해결을 위한 추천 런북(runbook)'을 반환
+# 5. Discord Bot: 분석 결과를 채널에 띄우고 [✅ 런북 실행 승인] 버튼을 제공
+# 6. Github Actions: 사용자가 승인하면 `config.RUNBOOK_ACTION_MAP`에 정의된 워크플로우(예: incident-response.yml)를 실행하여 자동 조치
 @app.post("/webhook/troubleshoot")
 async def troubleshoot(request: Request):
     data = await request.json()
@@ -366,28 +373,4 @@ async def troubleshoot(request: Request):
     print("="*50)
     return {"status": "received", "count": len(alerts), "priority": priority}
 
-    # scale-in은 항상 1대 감소
-    await trigger_github_action("scale-in", {
-        "require_ec2": 1,
-        "sender": "alertmanager"
-    })
 
-    return {"status": "triggered", "replicas": 1}
-# ============================
-# github로 요청 날리는 형식
-# ============================
-async def trigger_github_action(event_type: str, payload: dict):
-    print(f" [{now_kst()}] GitHub {event_type} 호출")
-    url = f"https://api.github.com/repos/{GITHUB_REPO}/dispatches"
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-    }
-    body = {"event_type": event_type, "client_payload": payload}
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(url, headers=headers, json=body)
-        if r.status_code != 204:
-            print(f" GitHub 실패: {r.text}")
-            raise HTTPException(500, f"GitHub API failed: {r.text}")
-    print(f" GitHub {event_type} 성공!")
-    return {"triggered": True}

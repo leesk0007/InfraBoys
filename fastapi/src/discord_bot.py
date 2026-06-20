@@ -161,7 +161,10 @@ class RunbookApprovalView(discord.ui.View):
         
         # 실제 GitHub Actions API 호출
         try:
-            await config.trigger_github_action(mapping["event_type"], mapping["payload"])
+            target_ip = self.instances.split(",")[0].split(":")[0].strip() if self.instances else ""
+            payload = {**mapping["payload"], "target_ip": target_ip}
+            
+            await config.trigger_github_action(mapping["event_type"], payload)
             
             await interaction.followup.send(
                 f"✅ **런북 실행 요청 성공!**\n"

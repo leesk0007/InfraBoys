@@ -39,9 +39,11 @@ async def analyze_with_gemini(masked_log: str, alerts_summary: str) -> dict:
             print("   Circuit Breaker HALF-OPEN - 테스트 호출 시도")
 
     runbook_list = """
-- runbook-scale-out.yml   : CPU/메모리 과부하, 트래픽 폭증 시 EC2 추가
-- runbook-db-restart.yml  : DB 연결 실패, DB 오류 발생 시 DB 재시작
-- runbook-rollback.yml    : 배포 후 에러 급증 시 이전 버전으로 롤백
+- was_restart_nginx.yml         : Nginx 프로세스 비정상 종료 시 재시작
+- was_cleanup_disk.yml          : 디스크 용량 95% 초과 시 임시 파일 정리
+- was_kill_process.yml          : 좀비 프로세스 또는 CPU 100% 점유 프로세스 종료
+- db_kill_idle_connections.yml  : PostgreSQL 커넥션 풀 고갈 시 idle 커넥션 정리
+- db_restart_container.yml      : PostgreSQL 프로세스 다운 시 DB 컨테이너 재시작
 """
 
     prompt = f"""
