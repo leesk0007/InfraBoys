@@ -10,6 +10,12 @@
 module "asg" {
   source = "../../modules/asg"
   
+  # 인스턴스 부팅 시 NAT 인스턴스를 통해 인터넷(ECR 등)에 접근해야 하므로,
+  # 프라이빗 라우팅 테이블 연결이 끝난 뒤에 ASG가 인스턴스를 띄우도록 보장합니다.
+  depends_on = [
+    aws_route_table_association.was_rt
+  ]
+
   ami_id = data.aws_ami.project02_was.id
 
   asg_name = "project02-asg"
