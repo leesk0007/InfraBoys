@@ -3913,7 +3913,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "nginx_connections_active{instance=~\"$server_ip:.*\"}",
+          "expr": "nginx_connections_active{instance=~\"$server_ip\"}",
           "legendFormat": "Active Connections",
           "refId": "A"
         }
@@ -3947,7 +3947,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(nginx_http_requests_total{instance=~\"$server_ip:.*\"}[1m])",
+          "expr": "rate(nginx_http_requests_total{instance=~\"$server_ip\"}[1m])",
           "legendFormat": "Requests / Sec",
           "refId": "A"
         }
@@ -3981,7 +3981,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(namedprocess_namegroup_cpu_seconds_total{instance=~\"$server_ip:.*\"}[1m])",
+          "expr": "rate(process_cpu_seconds_total{instance=~\"$server_ip\"}[1m])",
           "legendFormat": "{{groupname}}",
           "refId": "A"
         }
@@ -4015,7 +4015,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "namedprocess_namegroup_memory_bytes{instance=~\"$server_ip:.*\"}",
+          "expr": "process_resident_memory_bytes{instance=~\"$server_ip\"}",
           "legendFormat": "{{groupname}} - {{memtype}}",
           "refId": "A"
         }
@@ -4142,7 +4142,7 @@
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
-        "regex": "(.*):\\d+",
+        "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"

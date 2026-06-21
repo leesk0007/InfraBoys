@@ -10,14 +10,14 @@ groups:
     rules:
       # cpu
       - record: present_average_cpu
-        expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100
+        expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle", instance_name=~".*was.*"}[5m])) * 100
 
       - record: future_average_cpu
         expr: predict_linear(present_average_cpu[30m:], 10 * 60)
 
       # memory
       - record: present_average_memory
-        expr: avg((1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100)
+        expr: avg((1 - (node_memory_MemAvailable_bytes{instance_name=~".*was.*"} / node_memory_MemTotal_bytes{instance_name=~".*was.*"})) * 100)
 
       - record: future_average_memory
         expr: predict_linear(present_average_memory[30m:], 10 * 60)
@@ -147,11 +147,11 @@ groups:
       #  4. PostgreSQL 커넥션 풀 고갈 테스트 완
       - alert: Postgres-connectionfullout
         expr: |
-          sum(pg_stat_activity_count{state="active"})
+          sum by (instance) (pg_stat_activity_count)
           /
-          scalar(max(pg_settings_max_connections))
+          max by (instance) (pg_settings_max_connections)
           > 0.2
-        for: 1m
+        for: 3m
         labels:
           action: Aiops_kill_idle_connections
           case: "db_connection_full"
