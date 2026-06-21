@@ -4,7 +4,7 @@
 # [효과] postgres 컨테이너 재시작 후 정상 기동 확인
 
 - name: DB 프로세스 다운 대응 — postgres 컨테이너 재시작
-  hosts: db
+  hosts: all
   become: yes
 
   vars:
