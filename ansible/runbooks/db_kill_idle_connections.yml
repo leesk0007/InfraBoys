@@ -10,7 +10,7 @@
   vars:
     db_user: "eventuser"
     db_name: "eventdb"
-    idle_threshold_minutes: 5
+    idle_threshold_minutes: 0
 
   tasks:
     - name: 현재 커넥션 상태 확인
