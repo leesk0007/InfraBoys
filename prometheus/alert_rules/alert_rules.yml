@@ -147,9 +147,9 @@ groups:
       #  4. PostgreSQL 커넥션 풀 고갈 테스트 완
       - alert: Postgres-connectionfullout
         expr: |
-          sum(pg_stat_activity_count{state="active"})
+          sum by (instance) (pg_stat_activity_count{state="active"})
           /
-          scalar(max(pg_settings_max_connections))
+          max by (instance) (pg_settings_max_connections)
           > 0.2
         for: 1m
         labels:
