@@ -294,9 +294,11 @@ async def troubleshoot(request: Request):
     print("="*50)
 
     alerts = data.get("alerts", [])
+    alerts = [a for a in alerts if a.get("status") == "firing"]
 
     if not alerts:
-        return {"status": "no alerts", "count": 0}
+        print("  => 모든 알람이 resolved 상태이거나 없습니다. 무시합니다.")
+        return {"status": "no alerts or resolved", "count": 0}
 
     alert_names = ", ".join([a.get("labels", {}).get("alertname", "unknown") for a in alerts])
     instances   = ", ".join([a.get("labels", {}).get("instance",   "unknown") for a in alerts])
