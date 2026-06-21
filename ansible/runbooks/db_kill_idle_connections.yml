@@ -8,7 +8,7 @@
   become: yes
 
   vars:
-    db_user: "postgres"
+    db_user: "eventuser"
     db_name: "eventdb"
     idle_threshold_minutes: 5
 
