@@ -4,7 +4,7 @@
 # [효과] 5분 이상 Sleep 상태인 잉여 커넥션 일괄 강제 종료
 
 - name: DB 커넥션 풀 고갈 대응 — idle 커넥션 강제 종료
-  hosts: db
+  hosts: all
   become: yes
 
   vars:
