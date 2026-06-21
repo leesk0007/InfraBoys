@@ -151,7 +151,7 @@ groups:
           /
           max by (instance) (pg_settings_max_connections)
           > 0.2
-        for: 1m
+        for: 3m
         labels:
           action: Aiops_kill_idle_connections
           case: "db_connection_full"
