@@ -3,4 +3,5 @@
 *.tfvars.json
 .terraform/
 *.tfstate
-*.tfstate.backup__pycache__/
+*.tfstate.backup
+__pycache__/
