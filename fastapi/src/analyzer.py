@@ -6,7 +6,7 @@ from google import genai
 from fastapi.concurrency import run_in_threadpool
 import config
 
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash"
 client = genai.Client(api_key=config.GEMINI_API_KEY)
 
 def mask_pii(text: str) -> str:
