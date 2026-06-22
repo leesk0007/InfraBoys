@@ -1,6 +1,7 @@
 import re
 import json
 import asyncio
+import itertools
 from datetime import datetime
 from google import genai
 from fastapi.concurrency import run_in_threadpool
@@ -18,6 +19,48 @@ def mask_pii(text: str) -> str:
     text = re.sub(r'AKIA[0-9A-Z]{16}', '[MASKED_AWS_KEY]', text)
     text = re.sub(r'eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+', '[MASKED_JWT]', text)
     return text
+
+# =============================================
+# 로그 원문에서 에러 줄 발췌 (정규식 기반, AI 미사용)
+# =============================================
+ERROR_PATTERN = re.compile(
+    r'CRITICAL|FATAL|ERROR|Exception|Traceback \(most recent call last\)|'
+    r'Connection refused|could not connect|no space left on device|'
+    r'out of memory|too many (clients|connections)|Segmentation fault',
+    re.IGNORECASE
+)
+
+def extract_error_excerpt(masked_log: str, context_lines: int = 2, max_chars: int = 900) -> str:
+    """마스킹된 로그에서 에러로 보이는 줄을 찾아 원본 그대로(앞뒤 컨텍스트 포함) 발췌한다."""
+    lines = masked_log.splitlines()
+    if not lines:
+        return "로그가 비어 있습니다."
+
+    # 최근 알람과 가장 관련 있을 가능성이 높은, 가장 마지막 매칭 줄을 선택
+    match_idx = None
+    for i in range(len(lines) - 1, -1, -1):
+        if ERROR_PATTERN.search(lines[i]):
+            match_idx = i
+            break
+
+    if match_idx is None:
+        return "로그에서 특정 오류 패턴을 찾지 못했습니다 (메트릭 기반 알람일 수 있음)."
+
+    start = max(0, match_idx - context_lines)
+    end = min(len(lines), match_idx + context_lines + 1)
+    window = lines[start:end]
+
+    # 연속으로 반복되는 동일한 줄은 묶어서 표시 (재시도 로그 도배 방지)
+    collapsed = []
+    for line, group in itertools.groupby(window):
+        count = sum(1 for _ in group)
+        collapsed.append(line if count == 1 else f"{line}  ({count}회 반복)")
+
+    excerpt = "\n".join(collapsed)
+    if len(excerpt) > max_chars:
+        excerpt = "...(생략)\n" + excerpt[-max_chars:]
+
+    return excerpt
 
 async def analyze_with_gemini(masked_log: str, alerts_summary: str) -> dict:
     now = datetime.now()
@@ -68,7 +111,8 @@ async def analyze_with_gemini(masked_log: str, alerts_summary: str) -> dict:
   "recommendation": "A 또는 B 또는 C",
   "recommendation_reason": "추천 이유 한 줄",
   "actions": ["즉시 조치 1", "즉시 조치 2", "즉시 조치 3"],
-  "runbook": "런북 목록에서 선택한 파일명"
+  "runbook": "런북 목록에서 선택한 파일명",
+  "log_evidence": "위 [서버 에러 로그]에서 cause 판단의 직접적인 근거가 된 줄을 원문 그대로(수정하지 말고) 1~3줄만 인용. 근거로 삼을 로그가 없으면 빈 문자열"
 }}
 
 스케일링 옵션:

@@ -6,10 +6,11 @@ import asyncio
 # =============================================
 # DB 저장
 # =============================================
-def save_to_db(result: dict, alert_name: str, instance: str):
+def save_to_db(result: dict, alert_name: str, instance: str, raw_log: str = None, log_excerpt: str = None, ai_log_evidence: str = None):
+    """알람 분석 결과를 저장하고, 새로 생긴 row의 id를 반환한다 (Discord 승인 결과를 연결하기 위함)."""
     if config.db_connection_pool is None:
         print(" DB 연결 풀 없음 - 저장 건너뜀")
-        return
+        return None
 
     conn = None
     try:
@@ -18,23 +19,61 @@ def save_to_db(result: dict, alert_name: str, instance: str):
             cur.execute("""
                 INSERT INTO aiops_logs (
                     alert_name, instance, cause,
-                    severity, recommendation, runbook, created_at
+                    severity, recommendation, runbook,
+                    raw_log, log_excerpt, ai_log_evidence, created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                RETURNING id
             """, (
                 alert_name,
                 instance,
                 result.get("cause", ""),
                 result.get("severity", ""),
                 result.get("recommendation", ""),
-                result.get("runbook", "")
+                result.get("runbook", ""),
+                raw_log,
+                log_excerpt,
+                ai_log_evidence
             ))
+            new_id = cur.fetchone()[0]
         conn.commit()
-        print(" DB 저장 완료")
+        print(f" DB 저장 완료 (id={new_id})")
+        return new_id
     except Exception as e:
         if conn:
             conn.rollback()
         print(f" DB 저장 실패: {e}")
+        return None
+    finally:
+        if conn:
+            config.db_connection_pool.putconn(conn)
+
+# =============================================
+# Discord 승인/거부 결과 기록
+# =============================================
+def mark_decision(aiops_log_id: int, decision: str, decided_by: str = None):
+    if aiops_log_id is None:
+        print(" aiops_log_id 없음 - 승인 결과 저장 건너뜀")
+        return
+    if config.db_connection_pool is None:
+        print(" DB 연결 풀 없음 - 승인 결과 저장 건너뜀")
+        return
+
+    conn = None
+    try:
+        conn = config.db_connection_pool.getconn()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE aiops_logs
+                SET decision = %s, decided_by = %s, decided_at = NOW()
+                WHERE id = %s
+            """, (decision, decided_by, aiops_log_id))
+        conn.commit()
+        print(f" 승인 결과 저장 완료 (id={aiops_log_id}, decision={decision})")
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f" 승인 결과 저장 실패: {e}")
     finally:
         if conn:
             config.db_connection_pool.putconn(conn)
@@ -51,13 +90,13 @@ def get_history(limit: int = 5):
         conn = config.db_connection_pool.getconn()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT alert_name, instance, cause, severity, created_at
+                SELECT alert_name, instance, cause, severity, created_at, decision, decided_by
                 FROM aiops_logs
                 ORDER BY created_at DESC
                 LIMIT %s
             """, (limit,))
             rows = cur.fetchall()
-            
+
             history = []
             for r in rows:
                 history.append({
@@ -65,7 +104,9 @@ def get_history(limit: int = 5):
                     "instance": r[1],
                     "cause": r[2],
                     "severity": r[3],
-                    "created_at": r[4].strftime("%Y-%m-%d %H:%M:%S") if r[4] else ""
+                    "created_at": r[4].strftime("%Y-%m-%d %H:%M:%S") if r[4] else "",
+                    "decision": r[5],
+                    "decided_by": r[6]
                 })
             return history
     except Exception as e:

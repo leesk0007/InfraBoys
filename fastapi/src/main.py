@@ -334,14 +334,18 @@ async def troubleshoot(request: Request):
 
     print("② 마스킹 중...")
     masked_logs = analyzer.mask_pii(raw_logs)
+    log_excerpt = analyzer.extract_error_excerpt(masked_logs)
 
     if priority == "critical":
         print("③ Gemini 분석 중... (CRITICAL 알람)")
         result = await analyzer.analyze_with_gemini(masked_logs, alerts_summary)
-        print("④ Discord 전송 중...")
-        await notifier.send_discord_with_approval(result, alert_names, instances)
-        print("⑤ DB 저장 중...")
-        await config.run_in_threadpool(data_handler.save_to_db, result, alert_names, instances)
+        ai_log_evidence = result.get("log_evidence") or None
+        print("④ DB 저장 중...")
+        aiops_log_id = await config.run_in_threadpool(
+            data_handler.save_to_db, result, alert_names, instances, masked_logs, log_excerpt, ai_log_evidence
+        )
+        print("⑤ Discord 전송 중...")
+        await notifier.send_discord_with_approval(result, alert_names, instances, ai_log_evidence, aiops_log_id)
 
     elif priority == "warning":
         print("③ Gemini 생략 (WARNING 알람)")
@@ -353,10 +357,12 @@ async def troubleshoot(request: Request):
             "actions": ["로그 확인", "모니터링 강화", "추이 관찰"],
             "runbook": "없음"
         }
-        print("④ Discord 전송 중...")
-        await notifier.send_discord_with_approval(result, alert_names, instances)
-        print("⑤ DB 저장 중...")
-        await config.run_in_threadpool(data_handler.save_to_db, result, alert_names, instances)
+        print("④ DB 저장 중...")
+        aiops_log_id = await config.run_in_threadpool(
+            data_handler.save_to_db, result, alert_names, instances, masked_logs, log_excerpt
+        )
+        print("⑤ Discord 전송 중...")
+        await notifier.send_discord_with_approval(result, alert_names, instances, None, aiops_log_id)
 
     else:
         print("③ Gemini 생략 (낮은 우선순위)")
@@ -370,7 +376,9 @@ async def troubleshoot(request: Request):
             "runbook": "없음"
         }
         print("⑤ DB 저장 중...")
-        await config.run_in_threadpool(data_handler.save_to_db, result, alert_names, instances)
+        await config.run_in_threadpool(
+            data_handler.save_to_db, result, alert_names, instances, masked_logs, log_excerpt
+        )
 
     print("="*50)
     return {"status": "received", "count": len(alerts), "priority": priority}
