@@ -15,9 +15,9 @@ on:
           - was_restart_nginx.yml
           - was_kill_process.yml
           - was_cleanup_disk.yml
-        default: restart_nginx.yml
+        default: was_restart_nginx.yml   # ✅ 수정
       pid:
-        description: "종료할 프로세스 PID (kill_process.yml 선택 시에만 필수)"
+        description: "종료할 프로세스 PID (kill_process.yml 선택 시 선택사항)"
         required: false
         default: ""
 
@@ -29,7 +29,7 @@ env:
   PLAYBOOK_DIR: "ansible/runbooks"
 
 jobs:
-  test-connection:
+  Incident-response:
     runs-on: self-hosted
     timeout-minutes: 5
     steps:
@@ -74,9 +74,10 @@ jobs:
 
       - name: Setup SSH Key
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.ANSIBLE_KEY }}" > ~/.ssh/ansible_test_key
-          chmod 600 ~/.ssh/ansible_test_key
+          SSH_KEY_PATH="$RUNNER_TEMP/ansible_key_${{ github.run_id }}"
+          echo "${{ secrets.ANSIBLE_KEY }}" > "$SSH_KEY_PATH"
+          chmod 600 "$SSH_KEY_PATH"
+          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> $GITHUB_ENV
 
       - name: Run Ansible Playbook
         env:
@@ -90,9 +91,33 @@ jobs:
           ansible-playbook -i "${TARGET_IP}," \
             "$PLAYBOOK_DIR/$PLAYBOOK" \
             -u ec2-user \
-            --private-key ~/.ssh/ansible_test_key \
+            --private-key "$SSH_KEY_PATH" \
             $EXTRA_ARGS
 
       - name: Cleanup SSH Key
         if: always()
-        run: rm -f ~/.ssh/ansible_test_key
+        run: rm -f "$SSH_KEY_PATH"
+
+      - name: Send Incident Success Notification
+        if: success()
+        run: |
+          MESSAGE="✅ **장애 복구 성공**
+          - **대상 IP**: ${{ env.TARGET_IP }}
+          - **수행 플레이북**: ${{ env.PLAYBOOK }}
+          - **결과**: 복구 작업 완료
+          - **로그 확인**: [GitHub Actions 로그](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" -X POST -d @discord-payload.json "${{ secrets.DISCORD_WEBHOOK_URL }}"
+
+      - name: Send Incident Failure Notification
+        if: failure()
+        run: |
+          MESSAGE="❌ **장애 복구 실패 (수동 개입 필요)**
+          - **대상 IP**: ${{ env.TARGET_IP }}
+          - **수행 플레이북**: ${{ env.PLAYBOOK }}
+          - **결과**: 복구 조치 도중 오류 발생 또는 복구 조건 미충족
+          - **로그 확인**: [GitHub Actions 로그](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          jq -n --arg msg "$MESSAGE" '{"content": $msg}' > discord-payload.json
+          curl -s -H "Content-Type: application/json" -X POST -d @discord-payload.json "${{ secrets.DISCORD_WEBHOOK_URL }}"
