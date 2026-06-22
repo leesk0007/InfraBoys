@@ -129,6 +129,7 @@ def init_db():
             """)
             cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS raw_log TEXT")
             cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS log_excerpt TEXT")
+            cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS ai_log_evidence TEXT")
             cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS decision TEXT")
             cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS decided_by TEXT")
             cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS decided_at TIMESTAMP")

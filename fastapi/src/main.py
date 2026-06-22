@@ -339,12 +339,13 @@ async def troubleshoot(request: Request):
     if priority == "critical":
         print("③ Gemini 분석 중... (CRITICAL 알람)")
         result = await analyzer.analyze_with_gemini(masked_logs, alerts_summary)
+        ai_log_evidence = result.get("log_evidence") or None
         print("④ DB 저장 중...")
         aiops_log_id = await config.run_in_threadpool(
-            data_handler.save_to_db, result, alert_names, instances, masked_logs, log_excerpt
+            data_handler.save_to_db, result, alert_names, instances, masked_logs, log_excerpt, ai_log_evidence
         )
         print("⑤ Discord 전송 중...")
-        await notifier.send_discord_with_approval(result, alert_names, instances, log_excerpt, aiops_log_id)
+        await notifier.send_discord_with_approval(result, alert_names, instances, ai_log_evidence, aiops_log_id)
 
     elif priority == "warning":
         print("③ Gemini 생략 (WARNING 알람)")
@@ -361,7 +362,7 @@ async def troubleshoot(request: Request):
             data_handler.save_to_db, result, alert_names, instances, masked_logs, log_excerpt
         )
         print("⑤ Discord 전송 중...")
-        await notifier.send_discord_with_approval(result, alert_names, instances, log_excerpt, aiops_log_id)
+        await notifier.send_discord_with_approval(result, alert_names, instances, None, aiops_log_id)
 
     else:
         print("③ Gemini 생략 (낮은 우선순위)")

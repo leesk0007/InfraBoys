@@ -111,7 +111,8 @@ async def analyze_with_gemini(masked_log: str, alerts_summary: str) -> dict:
   "recommendation": "A 또는 B 또는 C",
   "recommendation_reason": "추천 이유 한 줄",
   "actions": ["즉시 조치 1", "즉시 조치 2", "즉시 조치 3"],
-  "runbook": "런북 목록에서 선택한 파일명"
+  "runbook": "런북 목록에서 선택한 파일명",
+  "log_evidence": "위 [서버 에러 로그]에서 cause 판단의 직접적인 근거가 된 줄을 원문 그대로(수정하지 말고) 1~3줄만 인용. 근거로 삼을 로그가 없으면 빈 문자열"
 }}
 
 스케일링 옵션:

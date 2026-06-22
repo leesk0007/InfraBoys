@@ -2,7 +2,7 @@ import requests
 from datetime import datetime
 import config
 
-def build_embed_dict(result: dict, alert_names: str, instances: str, log_excerpt: str = None):
+def build_embed_dict(result: dict, alert_names: str, instances: str, ai_log_evidence: str = None):
     color_map = {"높음": 0xFF0000, "중간": 0xFF8C00, "낮음": 0x00FF00}
     color = color_map.get(result.get("severity", ""), 0x5865F2)
     now   = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -25,8 +25,8 @@ def build_embed_dict(result: dict, alert_names: str, instances: str, log_excerpt
         {"name": "추천 런북", "value": result.get("runbook", ""),               "inline": False},
     ]
 
-    if log_excerpt:
-        fields.append({"name": "에러 로그 발췌", "value": f"```\n{log_excerpt}\n```", "inline": False})
+    if ai_log_evidence:
+        fields.append({"name": "핵심 오류 로그 (AI 발췌)", "value": f"```\n{ai_log_evidence}\n```", "inline": False})
 
     return {
         "title": f"장애 감지 - {alert_names}",
@@ -35,8 +35,8 @@ def build_embed_dict(result: dict, alert_names: str, instances: str, log_excerpt
         "footer": {"text": "Privacy AIOps - 로그는 마스킹 처리 후 AI 분석됨"}
     }
 
-def send_discord(result: dict, alert_names: str, instances: str, log_excerpt: str = None):
-    embed_dict = build_embed_dict(result, alert_names, instances, log_excerpt)
+def send_discord(result: dict, alert_names: str, instances: str, ai_log_evidence: str = None):
+    embed_dict = build_embed_dict(result, alert_names, instances, ai_log_evidence)
     payload = {
         "username": "AIOps 분석 봇",
         "embeds": [embed_dict]
@@ -50,14 +50,14 @@ def send_discord(result: dict, alert_names: str, instances: str, log_excerpt: st
     except requests.RequestException as e:
         print(f" Discord 전송 실패 (무시하고 계속): {e}")
 
-async def send_discord_with_approval(result: dict, alert_names: str, instances: str, log_excerpt: str = None, aiops_log_id: int = None):
+async def send_discord_with_approval(result: dict, alert_names: str, instances: str, ai_log_evidence: str = None, aiops_log_id: int = None):
     """분석 결과를 Discord Bot으로 전송하면서 승인/거부 버튼을 첨부"""
     import discord
     from discord_bot import bot, RunbookApprovalView
 
     if not config.DISCORD_CHANNEL_ID or config.DISCORD_CHANNEL_ID == "YOUR_DISCORD_CHANNEL_ID":
         print(" [Notifier] Discord 채널 ID가 없습니다. Webhook으로 fallback")
-        send_discord(result, alert_names, instances, log_excerpt)
+        send_discord(result, alert_names, instances, ai_log_evidence)
         return
 
     channel = bot.get_channel(int(config.DISCORD_CHANNEL_ID))
@@ -66,11 +66,11 @@ async def send_discord_with_approval(result: dict, alert_names: str, instances: 
             channel = await bot.fetch_channel(int(config.DISCORD_CHANNEL_ID))
         except Exception as e:
             print(f" [Notifier] Discord 채널을 찾을 수 없음 ({e}). Webhook으로 fallback")
-            send_discord(result, alert_names, instances, log_excerpt)
+            send_discord(result, alert_names, instances, ai_log_evidence)
             return
 
     # Embed 생성
-    embed_dict = build_embed_dict(result, alert_names, instances, log_excerpt)
+    embed_dict = build_embed_dict(result, alert_names, instances, ai_log_evidence)
     embed = discord.Embed.from_dict(embed_dict)
 
     runbook = result.get("runbook", "")

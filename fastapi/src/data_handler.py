@@ -6,7 +6,7 @@ import asyncio
 # =============================================
 # DB 저장
 # =============================================
-def save_to_db(result: dict, alert_name: str, instance: str, raw_log: str = None, log_excerpt: str = None):
+def save_to_db(result: dict, alert_name: str, instance: str, raw_log: str = None, log_excerpt: str = None, ai_log_evidence: str = None):
     """알람 분석 결과를 저장하고, 새로 생긴 row의 id를 반환한다 (Discord 승인 결과를 연결하기 위함)."""
     if config.db_connection_pool is None:
         print(" DB 연결 풀 없음 - 저장 건너뜀")
@@ -20,9 +20,9 @@ def save_to_db(result: dict, alert_name: str, instance: str, raw_log: str = None
                 INSERT INTO aiops_logs (
                     alert_name, instance, cause,
                     severity, recommendation, runbook,
-                    raw_log, log_excerpt, created_at
+                    raw_log, log_excerpt, ai_log_evidence, created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
                 RETURNING id
             """, (
                 alert_name,
@@ -32,7 +32,8 @@ def save_to_db(result: dict, alert_name: str, instance: str, raw_log: str = None
                 result.get("recommendation", ""),
                 result.get("runbook", ""),
                 raw_log,
-                log_excerpt
+                log_excerpt,
+                ai_log_evidence
             ))
             new_id = cur.fetchone()[0]
         conn.commit()
