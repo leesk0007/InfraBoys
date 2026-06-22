@@ -127,6 +127,11 @@ def init_db():
                     created_at     TIMESTAMP DEFAULT NOW()
                 )
             """)
+            cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS raw_log TEXT")
+            cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS log_excerpt TEXT")
+            cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS decision TEXT")
+            cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS decided_by TEXT")
+            cur.execute("ALTER TABLE aiops_logs ADD COLUMN IF NOT EXISTS decided_at TIMESTAMP")
         conn.commit()
         print(" DB 테이블 확인 완료")
         return True

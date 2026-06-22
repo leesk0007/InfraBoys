@@ -117,11 +117,18 @@ async def cmd_history(ctx, count: int = 5):
         await ctx.send("📭 기록된 장애 이력이 없습니다.")
         return
         
+    decision_map = {
+        "approved": f"✅ 승인 ({h.get('decided_by') or '알 수 없음'})",
+        "denied": f"❌ 거부 ({h.get('decided_by') or '알 수 없음'})",
+        "timeout": "⏰ 타임아웃 (무응답 자동거부)",
+    }
+
     embed = discord.Embed(title=f"📜 최근 장애 이력 (최대 {count}건)", color=0x3498DB)
     for h in history:
+        decision_text = decision_map.get(h.get("decision"), "⏳ 대기중 / 해당없음")
         embed.add_field(
             name=f"[{h['created_at']}] {h['alert_name']}",
-            value=f"서버: {h['instance']} | 심각도: {h['severity']}\n원인: {h['cause'][:100]}...",
+            value=f"서버: {h['instance']} | 심각도: {h['severity']}\n원인: {h['cause'][:100]}...\n처리: {decision_text}",
             inline=False
         )
     await ctx.send(embed=embed)
@@ -129,43 +136,45 @@ async def cmd_history(ctx, count: int = 5):
 class RunbookApprovalView(discord.ui.View):
     """런북 실행 승인/거부 버튼이 포함된 View"""
     
-    def __init__(self, result: dict, alert_names: str, instances: str):
+    def __init__(self, result: dict, alert_names: str, instances: str, aiops_log_id: int = None):
         super().__init__(timeout=300) # 5분 타임아웃
         self.result = result
         self.alert_names = alert_names
         self.instances = instances
+        self.aiops_log_id = aiops_log_id
         self.responded = False
         self.message = None
-    
+
     @discord.ui.button(label="✅ 런북 실행 승인", style=discord.ButtonStyle.green)
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.responded:
             return
         self.responded = True
-        
+
         runbook = self.result.get("runbook", "알 수 없는 런북")
         mapping = config.RUNBOOK_ACTION_MAP.get(runbook)
-        
+
         if not mapping:
             await interaction.response.edit_message(
                 content=f"❌ **지원하지 않는 런북입니다:** `{runbook}`",
                 view=None
             )
             return
-        
+
         # 버튼 비활성화 + 실행 중 표시
         await interaction.response.edit_message(
             content=f"⏳ **GitHub Actions 실행 요청 중...**\n- 액션: {mapping['description']}\n- 승인자: {interaction.user.name}",
             view=None
         )
-        
+
         # 실제 GitHub Actions API 호출
         try:
             target_ip = self.instances.split(",")[0].split(":")[0].strip() if self.instances else ""
             payload = {**mapping["payload"], "target_ip": target_ip}
-            
+
             await config.trigger_github_action(mapping["event_type"], payload)
-            
+            await config.run_in_threadpool(data_handler.mark_decision, self.aiops_log_id, "approved", interaction.user.name)
+
             await interaction.followup.send(
                 f"✅ **런북 실행 요청 성공!**\n"
                 f"- GitHub Actions에서 `{mapping['event_type']}` 이벤트가 트리거되었습니다.\n"
@@ -173,22 +182,25 @@ class RunbookApprovalView(discord.ui.View):
             )
         except Exception as e:
             await interaction.followup.send(f"❌ **런북 실행 요청 실패:** {e}")
-    
+
     @discord.ui.button(label="❌ 거부", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.responded:
             return
         self.responded = True
-        
+
+        await config.run_in_threadpool(data_handler.mark_decision, self.aiops_log_id, "denied", interaction.user.name)
+
         await interaction.response.edit_message(
             content=f"❌ **런북 실행이 거부되었습니다.** (거부자: {interaction.user.name})",
             view=None
         )
-    
+
     async def on_timeout(self):
         """5분 동안 응답 없으면 자동 만료"""
         if not self.responded and self.message:
             try:
+                await config.run_in_threadpool(data_handler.mark_decision, self.aiops_log_id, "timeout", None)
                 await self.message.edit(
                     content="⏰ **승인 시간 초과 (5분)** — 런북 실행이 자동 거부되었습니다.",
                     view=None
