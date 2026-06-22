@@ -29,7 +29,7 @@ env:
   PLAYBOOK_DIR: "ansible/runbooks"
 
 jobs:
-  Insident-response:
+  Incident-response:
     runs-on: self-hosted
     timeout-minutes: 5
     steps:
