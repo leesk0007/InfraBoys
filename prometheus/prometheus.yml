@@ -51,13 +51,9 @@ scrape_configs:
       # EC2의 네임 태그 확인
       - source_labels: [__meta_ec2_tag_Name]
         target_label: instance_name
-    # Grafana 호환성: instance 라벨에서 포트 번호를 제거하여 IP만 유지
-    # (relabel_configs로는 Prometheus가 자동으로 포트를 재추가하므로 metric_relabel_configs 사용)
-    metric_relabel_configs:
-      - source_labels: [instance]
-        regex: '([^:]+):\d+'
+      # instance 라벨을 포트 없는 순수 IP로 명시적 강제 지정 (up 메트릭 포함 적용)
+      - source_labels: [__meta_ec2_private_ip]
         target_label: instance
-        replacement: '${1}'
   # was ec2의 nginx exporter 부분
   - job_name: 'nginx'
     ec2_sd_configs:
@@ -75,11 +71,8 @@ scrape_configs:
       replacement: "${1}:9113"
     - source_labels: [__meta_ec2_tag_Name]
       target_label: instance_name
-    metric_relabel_configs:
-    - source_labels: [instance]
-      regex: '([^:]+):\d+'
+    - source_labels: [__meta_ec2_private_ip]
       target_label: instance
-      replacement: '${1}'
 
   # was ec2의 process exporter 부분
   - job_name: 'process'
@@ -98,11 +91,8 @@ scrape_configs:
       replacement: "${1}:9256"
     - source_labels: [__meta_ec2_tag_Name]
       target_label: instance_name
-    metric_relabel_configs:
-    - source_labels: [instance]
-      regex: '([^:]+):\d+'
+    - source_labels: [__meta_ec2_private_ip]
       target_label: instance
-      replacement: '${1}'
       
   # db ec2의 postgres exporter 부분
   - job_name: 'postgres'
@@ -121,9 +111,6 @@ scrape_configs:
       replacement: "${1}:9187"
     - source_labels: [__meta_ec2_tag_Name]
       target_label: instance_name
-    metric_relabel_configs:
-    - source_labels: [instance]
-      regex: '([^:]+):\d+'
+    - source_labels: [__meta_ec2_private_ip]
       target_label: instance
-      replacement: '${1}'
 

@@ -4092,7 +4092,7 @@
         "name": "nodename",
         "options": [],
         "query": {
-          "query": "query_result(node_uname_info{job=\"$job\"} and on(instance) up{job=\"$job\"} == 1)",
+          "query": "query_result(node_uname_info{job=\"$job\"})",
           "refId": "Prometheus-nodename-Variable-Query"
         },
         "refresh": 1,
@@ -4115,7 +4115,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "query_result(node_uname_info{job=\"$job\", nodename=\"$nodename\"} and on(instance) up{job=\"$job\"} == 1)",
+          "query": "query_result(node_uname_info{job=\"$job\", nodename=\"$nodename\"})",
           "refId": "Prometheus-node-Variable-Query"
         },
         "refresh": 1,
