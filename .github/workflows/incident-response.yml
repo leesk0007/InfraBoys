@@ -82,6 +82,7 @@ jobs:
       - name: Run Ansible Playbook
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          ANSIBLE_REMOTE_TMP: "/tmp"
         run: |
           EXTRA_ARGS=""
           if [ "$PLAYBOOK" = "was_kill_process.yml" ] && [ -n "$PID_INPUT" ]; then
