@@ -105,8 +105,12 @@ async def cmd_analyze(ctx, target_ip: str):
     await ctx.send(embed=embed)
     
     # DB 저장
-    import main
-    await config.run_in_threadpool(data_handler.save_to_db, result, "ManualAnalysis", target_ip)
+    log_excerpt = analyzer.extract_error_excerpt(masked_logs)
+    ai_log_evidence = result.get("log_evidence") or None
+    await config.run_in_threadpool(
+        data_handler.save_to_db, result, "ManualAnalysis", target_ip,
+        masked_logs, log_excerpt, ai_log_evidence
+    )
 
 @bot.command(name="history")
 async def cmd_history(ctx, count: int = 5):

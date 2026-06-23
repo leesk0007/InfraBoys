@@ -10,17 +10,17 @@ groups:
     rules:
       # cpu
       - record: present_average_cpu
-        expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle", instance_name=~".*was.*"}[5m])) * 100
+        expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle", instance_name=~".*was.*"}[1m])) * 100
 
       - record: future_average_cpu
-        expr: clamp_max(clamp_min(predict_linear(present_average_cpu[10m:], 10 * 60), 0), 100)
+        expr: clamp_max(clamp_min(predict_linear(present_average_cpu[5m:], 5 * 60), 0), 100)
 
       # memory
       - record: present_average_memory
         expr: avg((1 - (node_memory_MemAvailable_bytes{instance_name=~".*was.*"} / node_memory_MemTotal_bytes{instance_name=~".*was.*"})) * 100)
 
       - record: future_average_memory
-        expr: clamp_max(clamp_min(predict_linear(present_average_memory[10m:], 10 * 60), 0), 100)
+        expr: clamp_max(clamp_min(predict_linear(present_average_memory[5m:], 5 * 60), 0), 100)
 
   # ============================================================
   #  예측 + 현재값 알람 (현재값 OR 5분 후 예측값)
@@ -40,7 +40,7 @@ groups:
           )
           unless
           (present_average_cpu > 60 or future_average_cpu > 60)
-        for: 5m
+        for: 30s
         labels:
           level: "1"
           action: scale_out
@@ -54,7 +54,7 @@ groups:
           )
           unless
           (present_average_memory > 85 or future_average_memory > 85)
-        for: 5m
+        for: 30s
         labels:
           level: "1"
           action: scale_out
@@ -64,7 +64,7 @@ groups:
           (present_average_cpu > 60)
           or
           (future_average_cpu  > 60)
-        for: 3m
+        for: 30s
         labels:
           level: "2"
           action: scale_out
@@ -74,7 +74,7 @@ groups:
           (present_average_memory > 85)
           or
           (future_average_memory  > 85)
-        for: 3m
+        for: 30s
         labels:
           level: "2"
           action: scale_out
@@ -90,7 +90,7 @@ groups:
           (present_average_cpu <= 50)
           and
           (future_average_cpu  <= 50)
-        for: 5m
+        for: 1m
         labels:
           action: scale_in
 
@@ -99,7 +99,7 @@ groups:
           (present_average_memory <= 60)
           and
           (future_average_memory  <= 60)
-        for: 5m
+        for: 1m
         labels:
           action: scale_in
 

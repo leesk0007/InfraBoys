@@ -39,15 +39,38 @@ scrape_configs:
       - source_labels: [__meta_ec2_instance_state]
         regex: running
         action: keep
-      # 태그 Role = WAS 와 DB인 인스턴스 수집
+      # 태그 Role = WAS 인 인스턴스 수집
       - source_labels: [__meta_ec2_tag_Role]
-        regex: WAS|DB
+        regex: WAS
         action: keep
       # 수집 타겟 IP를 프라이빗 IP로 변경
       - source_labels: [__meta_ec2_private_ip]
         target_label: __address__
         replacement: "${1}:9100"
-      
+      # EC2의 네임 태그 확인
+      - source_labels: [__meta_ec2_tag_Name]
+        target_label: instance_name
+      # instance 라벨을 포트 없는 순수 IP로 명시적 강제 지정 (up 메트릭 포함 적용)
+      - source_labels: [__meta_ec2_private_ip]
+        target_label: instance
+
+  - job_name: "aws-db-nodes"
+    ec2_sd_configs:
+      - region: ap-northeast-2
+        port: 9100
+    relabel_configs:
+      # 인스턴스 상태가 running 인 것만 수집
+      - source_labels: [__meta_ec2_instance_state]
+        regex: running
+        action: keep
+      # 태그 Role = DB 인 인스턴스 수집
+      - source_labels: [__meta_ec2_tag_Role]
+        regex: DB
+        action: keep
+      # 수집 타겟 IP를 프라이빗 IP로 변경
+      - source_labels: [__meta_ec2_private_ip]
+        target_label: __address__
+        replacement: "${1}:9100"
       # EC2의 네임 태그 확인
       - source_labels: [__meta_ec2_tag_Name]
         target_label: instance_name

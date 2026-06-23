@@ -24,10 +24,16 @@
           command: "logrotate -f /etc/logrotate.conf"
           register: logrotate_result
           changed_when: logrotate_result.rc == 0
+          ignore_errors: yes
 
         - name: "logrotate 실행 결과"
           debug:
             msg: "logrotate 강제 실행 완료 (rc={{ logrotate_result.rc }})"
+
+        # ───── 조치 3: 테스트용 더미 파일 삭제 ─────
+        - name: "조치 3: 테스트용 더미 디스크 파일 삭제"
+          shell: "rm -f /home/*/dummy_disk_full.img /root/dummy_disk_full.img"
+          ignore_errors: yes
 
         # ───── 결과 보고 ─────
         - name: "결과 보고: 성공"

@@ -15,7 +15,7 @@ route:
   group_by: ['action']
   
   # 첫 알람 발생 후 그룹화 위해 대기하는 시간
-  group_wait: 30s
+  group_wait: 5s
 
   # 같은 알람이 계속 발생할 때 재전송 간격
   repeat_interval: 15m
