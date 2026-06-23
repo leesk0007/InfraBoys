@@ -18,7 +18,7 @@ route:
   group_wait: 5s
 
   # 같은 알람이 계속 발생할 때 재전송 간격
-  repeat_interval: 15m
+  repeat_interval: 5m
   
   # 기본 receiver (어디서도 매칭 안 되면 여기로)
   receiver: 'discord-webhook'
