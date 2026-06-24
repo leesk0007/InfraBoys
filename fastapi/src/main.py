@@ -259,8 +259,18 @@ async def webhook_scale_out(request: Request):
     firing = [a for a in alerts if a.get("status") == "firing"]
     if not firing:
         return {"status": "skipped"}
+        
+    current = get_current_ec2_count()
+    if current >= config.EC2_MAX_COUNT:
+        print(f" Scale-Out 무시: 현재 {current}대로 최대 한도에 도달했습니다.")
+        return {"status": "skipped", "reason": "max_capacity_reached"}
+        
     max_level = max(int(a["labels"].get("level", 0)) for a in firing)
     replicas = 1 if max_level == 1 else 2
+    
+    if current + replicas > config.EC2_MAX_COUNT:
+        replicas = config.EC2_MAX_COUNT - current
+        
     await config.trigger_github_action("scale-out", {"require_ec2": replicas, "sender": "alertmanager"})
     return {"status": "triggered", "replicas": replicas}
 
@@ -271,6 +281,12 @@ async def webhook_scale_in(request: Request):
     firing = [a for a in alerts if a.get("status") == "firing"]
     if not firing:
         return {"status": "skipped"}
+        
+    current = get_current_ec2_count()
+    if current <= config.EC2_MIN_COUNT:
+        print(f" Scale-In 무시: 현재 {current}대로 최소 한도에 도달했습니다.")
+        return {"status": "skipped", "reason": "min_capacity_reached"}
+        
     await config.trigger_github_action("scale-in", {"require_ec2": 1, "sender": "alertmanager"})
     return {"status": "triggered", "replicas": 1}
 
