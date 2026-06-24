@@ -25,6 +25,11 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Restore Secret Keys
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/terraform/keys
+          cp -r /workspace/terraform/keys/* $GITHUB_WORKSPACE/terraform/keys/ || true
+
       - name: Terraform Init
         run: terraform init -upgrade
 

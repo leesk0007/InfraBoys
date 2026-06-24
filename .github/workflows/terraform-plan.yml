@@ -26,6 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore Secret Keys
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/terraform/keys
+          cp -r /workspace/terraform/keys/* $GITHUB_WORKSPACE/terraform/keys/ || true
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
