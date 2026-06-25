@@ -53,6 +53,9 @@
 
 ## 🗺️ 3. 아키텍처 및 수행 절차 (Execution Plan)
 
+<img width="1184" height="993" alt="아키텍처 drawio (2)" src="https://github.com/user-attachments/assets/da9e0015-446a-4ce4-b699-1ca533dca9bd" />
+
+
 ### 📌 주요 수행 단계
 1. **인프라 코드화 및 보안 관리**: 모든 인프라 변경을 GitHub → MGMT 서버 경유로 하여 AWS 키 노출 차단 및 `tfstate` 일원화 관리
 2. **IaC 기반 프로비저닝**: Terraform으로 AWS 인프라(VPC, ALB, ASG, EC2) 프로비저닝, Ansible로 구성 관리 자동화
