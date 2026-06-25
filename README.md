@@ -11,17 +11,17 @@
 
 본 프로젝트는 이러한 한계를 극복하고 **예방적이고 관리자 친화적인 자율형 하이브리드 인프라**를 구축하는 것을 목표로 합니다.
 
-- **선제적 스케일링**: Prometheus의 내장된 예측 함수 기능과 정기적 트래픽을 대비한 일정 기반 스케일링 방식을 상호보완적으로 융합하여, 트래픽 피크 이전에 자원을 선제적으로 확보합니다.
-- **AIOps 지능형 판단**: CPU 과부하나 OOM 같은 단일 지표의 이상을 넘어, 여러 원인이 얽힌 복합적인 장애 상황에서도 AIOps의 지능형 판단을 통해 보다 능동적이고 정확하게 대응합니다. 
-- **보안 강화**: AI 모델로 전송되는 민감한 로그 데이터는 Regex 기반 전처리 파이프라인을 거쳐 안전하게 보호됩니다.
-- **비용 최적화(FinOps)**: 자동화 파이프라인에 `Infracost`를 연동하여 인프라 변경 및 프로비저닝 단계에서 예상되는 클라우드 비용을 사전에 산출함으로써 예산의 투명성을 확보합니다.
-- **직관적 통제권**: 관리자는 통합 모니터링 대시보드를 통해 인프라 상태를 한눈에 파악하고, GUI 버튼 이벤트를 통해 실시간으로 서버를 제어할 수 있습니다.
+- **선제적 스케일링**: Prometheus의 내장된 예측 함수 기능과 정기적 트래픽을 대비한 일정 기반 스케일링 방식을 융합하여, 트래픽 피크 이전에 자원을 확보합니다.
+- **AIOps 판단**: CPU 과부하나 OOM 같은 단일 지표의 이상을 넘어, 여러 원인이 얽힌 복합적인 장애 상황에서도 AIOps를 통해 대응합니다. 
+- **보안 강화**: AI 모델로 전송되는 민감한 로그 데이터는 Regex 기반 전처리 파이프라인을 거쳐 보호됩니다.
+- **비용 관리(FinOps)**: 자동화 파이프라인에 `Infracost`를 연동하여 인프라 변경 및 프로비저닝 단계에서 예상되는 클라우드 비용을 사전에 산출합니다.
+- **통합 제어**: 관리자는 통합 모니터링 대시보드를 통해 인프라 상태를 파악하고, GUI 버튼 이벤트를 통해 실시간으로 서버를 제어할 수 있습니다.
 
 ### 🎯 주요 목표
-- AIOps 기반 지능형 장애 대응체계 구축
-- 수학적 예측 기반 선제적 오토스케일링
+- AIOps 기반 장애 대응체계 구축
+- 예측 기반 오토스케일링
 - IaC(Infa as Code) 기반 CI/CD 파이프라인 정립
-- 통합 가시성(Observability) 확보
+- 가시성(Observability) 확보
 
 ### ✨ 기대 효과
 - 장애 징후를 사전에 탐지하고 선제적으로 자원을 할당하여, 트래픽 폭주 시에도 서비스 안정화
@@ -51,7 +51,36 @@
 
 <br/>
 
-## 🗺️ 3. 아키텍처 및 수행 절차 (Execution Plan)
+## ✨ 3. 주요 기능 (Core Features)
+
+1. **AIOps 기반 장애 감지 및 자율 복구 (Closed-loop AIOps)**
+   - **Prometheus**를 통한 5대 장애(Nginx 다운, 디스크 풀, 좀비 프로세스, DB 커넥션 풀 고갈, DB 다운) 모니터링
+   - 알람 발생 시 FastAPI가 대상 서버에 접속하여 `docker logs` 수집 및 개인정보(PII) 마스킹 처리
+   - **LLM(Gemini AI)**을 활용한 로그 분석 및 런북(Runbook) 추천
+   - Discord 챗봇 알림 및 관리자의 승인(Human-in-the-loop)으로 **GitHub Actions** 복구 파이프라인 실행
+
+2. **예측 모델을 활용한 오토스케일링 (Predictive Auto-scaling)**
+   - Prometheus의 `predict_linear` 함수를 활용해 **5분 뒤의 리소스(CPU, Memory) 상태 예측**
+   - 트래픽 증가 전에 사전에 Scale-Out을 수행하여 서비스 안정성 확보
+
+3. **IaC 및 CI/CD 파이프라인 (GitOps & CI/CD)**
+   - 인프라 생성(Terraform)부터 구성 관리(Ansible) 및 컨테이너 빌드(Packer/Docker) 과정을 코드로 관리
+   - **GitHub Actions Self-Hosted Runner**를 활용하여 배포 워크플로우를 자동화하고 인프라 변경 이력 추적(Audit Trail)
+
+4. **FinOps 및 DevSecOps 연동**
+   - CI/CD 파이프라인 실행 시 `Infracost`를 연동하여 AWS 인프라 변경 전 **예상 클라우드 비용 산출**
+   - `Trivy` 스캐너를 통해 배포 전 컨테이너 이미지 취약점 점검
+
+5. **통합 모니터링 및 대시보드 제어 (Observability & Control)**
+   - **Grafana** 대시보드를 통해 하이브리드 인프라의 트래픽, 자원, 로그 시각화
+   - 대시보드 내에 예약 스케일링(시간/방향/수량 지정) 및 인프라 제어 버튼 삽입으로 운영 편의성 향상
+
+<br/>
+
+## 🗺️ 4. 아키텍처 및 수행 절차 (Execution Plan)
+
+<img width="1184" height="993" alt="아키텍처 drawio (2)" src="https://github.com/user-attachments/assets/da9e0015-446a-4ce4-b699-1ca533dca9bd" />
+
 
 <img width="1184" height="993" alt="아키텍처 drawio (2)" src="https://github.com/user-attachments/assets/da9e0015-446a-4ce4-b699-1ca533dca9bd" />
 
@@ -66,7 +95,12 @@
 
 <br/>
 
-## 👥 4. 팀원 및 역할 분담 (Team Roles)
+## 📺 5. 시나리오 시연 영상 (Demo Video)
+
+[![Demo Video](https://img.youtube.com/vi/ddEJIfbR9Ag/0.jpg)](https://youtu.be/ddEJIfbR9Ag)
+
+
+## 👥 6. 팀원 및 역할 분담 (Team Roles)
 
 | 이름 | 역할 | 담당 업무 |
 | :---: | :---: | :--- |
@@ -78,7 +112,7 @@
 
 <br/>
 
-## 📚 5. 참고 자료 (References)
+## 📚 7. 참고 자료 (References)
 - [테라폼으로 시작하는 IaC]
 - [AWS로 시작하는 인프라 구축의 정석]
 - [한 권으로 배우는 Docker & Kubernetes]
