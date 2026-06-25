@@ -7,3 +7,12 @@
 __pycache__/
 keys/
 
+# IDE 및 OS 임시 파일, 가상 환경 폴더 등
+.vscode/
+.idea/
+.DS_Store
+.venv/
+venv/
+
+# 로컬 문서(docs) 무시
+docs/

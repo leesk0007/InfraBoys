@@ -1,8 +1,0 @@
----
-- name: FastAPI deploy
-  hosts: was
-  remote_user: adreamin
-  become: yes
-
-  roles:
-    - fastapi
